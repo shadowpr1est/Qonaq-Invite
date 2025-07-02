@@ -3,10 +3,6 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { initResizeObserverErrorSuppression } from './lib/resizeObserverUtils';
-import { initGA } from './lib/analytics';
-
-// Инициализируем Google Analytics
-initGA();
 
 // Безопасный обработчик ошибок (предотвращает рекурсию)
 const handleError = (error: unknown, errorInfo?: { componentStack: string }) => {

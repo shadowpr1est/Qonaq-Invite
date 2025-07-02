@@ -2,7 +2,7 @@
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Google Analytics
-export const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID || '';
+export const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID || 'G-19YR61WN34';
 
 // App Information
 export const APP_NAME = import.meta.env.VITE_APP_NAME || 'InvitlyAI';
