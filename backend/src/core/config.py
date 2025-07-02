@@ -2,6 +2,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
 from pathlib import Path
+from typing import List
 
 
 class Settings(BaseSettings):
@@ -46,15 +47,14 @@ class Settings(BaseSettings):
     )
     
     # CORS - Поддержка для продакшна
-    ALLOWED_ORIGINS: list[str] = Field(
-        default=[
-            "http://localhost:3000", 
-            "http://localhost:5173", 
-            "http://localhost:8080",
-            "http://127.0.0.1:8080"
-        ],
-        env="ALLOWED_ORIGINS"
-    )
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173", 
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://98.66.137.117",
+        "https://98.66.137.117",
+    ]
     
     # Production domain support
     PRODUCTION_DOMAIN: str = Field(default="", env="PRODUCTION_DOMAIN")
@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     @property
     def effective_allowed_origins(self) -> list[str]:
         """Get effective CORS origins including production domain"""
-        origins = self.ALLOWED_ORIGINS.copy()
+        origins = self.CORS_ORIGINS.copy()
         if self.PRODUCTION_DOMAIN and self.ENVIRONMENT == "production":
             origins.extend([
                 f"https://{self.PRODUCTION_DOMAIN}",

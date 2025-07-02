@@ -449,7 +449,7 @@ const SiteViewer = () => {
               <div className="bg-white rounded px-3 py-1 flex-1 text-gray-700">
                 {site.is_published 
                   ? `invitely.app/e/${site.slug}`
-                  : 'localhost:3000/preview'
+                  : `${window.location.host}/preview`
                 }
               </div>
             </div>

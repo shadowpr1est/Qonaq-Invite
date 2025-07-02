@@ -7,13 +7,25 @@ interface ApiError {
   code?: string;
 }
 
+interface ApiResponse<T> {
+  data: T | null;
+  error: string | null;
+  loading: boolean;
+}
+
+interface RequestOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  headers?: Record<string, string>;
+  body?: any;
+}
+
+const baseUrl = import.meta.env.VITE_API_URL || '/api';
+
 // Базовая функция для API запросов
 const apiRequest = async <T>(
   url: string, 
   options?: RequestInit
 ): Promise<T> => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-  
   const response = await fetch(`${baseUrl}${url}`, {
     headers: {
       'Content-Type': 'application/json',
