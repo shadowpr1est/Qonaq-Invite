@@ -32,19 +32,23 @@ git submodule add <frontend-repo-url> frontend/inviteai-spark-invites
 git clone <frontend-repo-url> frontend/inviteai-spark-invites
 ```
 
-### **4. Запустите автоматический деплой:**
+### **4. Запуск через Docker Compose:**
 ```bash
-./deploy.sh
+# Простой запуск (все автоматически)
+docker-compose up --build -d
+
+# Запуск миграций
+docker-compose exec backend alembic upgrade head
 ```
 
 **ВСЕ!** Система автоматически:
-- 🔧 Соберет frontend
-- 🐳 Создаст Docker контейнеры  
+- 🔧 Соберет frontend в отдельном контейнере
+- 🐳 Создаст все 4 сервиса (db, frontend, backend, nginx)
 - 🗄️ Инициализирует базу данных
 - 🏥 Проверит health checks
 - 🚀 Запустит в продакшне
 
-> ⚠️ **Если frontend в отдельном репо:** См. `DEPLOY_WITH_SEPARATE_REPOS.md`
+> 📖 **Подробное руководство:** См. `DOCKER_COMPOSE_GUIDE.md`
 
 ---
 
@@ -76,10 +80,11 @@ git clone <frontend-repo-url> frontend/inviteai-spark-invites
 
 ## 🌐 **Доступ:**
 
-После успешного деплоя:
-- **Frontend:** `https://yourdomain.com`
-- **API Health:** `https://yourdomain.com/health`
-- **Logs:** `docker-compose -f docker-compose.prod.yml logs -f`
+После успешного запуска:
+- **Frontend:** `http://localhost`
+- **Backend API:** `http://localhost:8000` 
+- **Health Check:** `http://localhost/health`
+- **Logs:** `docker-compose logs -f`
 
 ---
 
