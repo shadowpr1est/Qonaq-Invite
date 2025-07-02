@@ -22,10 +22,9 @@ jobs:
           script: |
             cd /home/sem1colonn/Qonaq-Invite
             git pull origin main
-            docker-compose down
+            docker-compose down --remove-orphans
             docker rm -f invitly_frontend invitly_backend invitly_nginx invitly_db 2>/dev/null || true
+            docker network prune -f
             docker-compose pull
             docker-compose up --build -d
             docker-compose exec -T backend alembic upgrade head
-
-
