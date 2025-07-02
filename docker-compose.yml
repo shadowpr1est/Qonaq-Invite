@@ -77,11 +77,13 @@ services:
   nginx:
     image: nginx:alpine
     container_name: invitly_nginx
+    environment:
+      - SERVER_NAME=${SERVER_NAME:-localhost}
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/templates/nginx.conf.template:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
     networks:
       - invitly_network
@@ -89,6 +91,9 @@ services:
       - backend
       - frontend
     restart: unless-stopped
+    command: >
+      sh -c "envsubst '$$SERVER_NAME' < /etc/nginx/templates/nginx.conf.template > /etc/nginx/nginx.conf &&
+             nginx -g 'daemon off;'"
 
 volumes:
   postgres_data:

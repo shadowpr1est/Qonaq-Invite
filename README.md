@@ -14,13 +14,16 @@ cd Invitly
 
 ### **2. Настройте переменные окружения:**
 ```bash
-# Создайте .env файл
-cp backend/.env.example .env
+# Создайте .env файл в корне проекта
+nano .env
 
-# Заполните обязательные параметры:
-# - POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
-# - OPENAI_API_KEY
-# - PRODUCTION_DOMAIN
+# Добавьте обязательные переменные:
+SERVER_NAME=your-server-ip-or-domain.com    # IP сервера или домен
+POSTGRES_USER=invitly_user
+POSTGRES_PASSWORD=secure_password_123
+POSTGRES_DB=invitly_prod
+OPENAI_API_KEY=sk-your-openai-key
+PRODUCTION_DOMAIN=${SERVER_NAME}
 ```
 
 ### **3. Подготовка frontend (если отдельный репозиторий):**
@@ -48,19 +51,22 @@ docker-compose exec backend alembic upgrade head
 - 🏥 Проверит health checks
 - 🚀 Запустит в продакшне
 
-> 📖 **Подробное руководство:** См. `DOCKER_COMPOSE_GUIDE.md`
+> 📖 **Подробное руководство:** См. `SECURITY_GUIDE.md`  
+> 🔒 **Защита от DDoS:** Настроены жесткие rate limits и фильтрация атак
 
 ---
 
 ## 📋 **Что исправлено для продакшна:**
 
 ### **🔐 Безопасность:**
+- ✅ **DDoS защита** с жесткими rate limits
+- ✅ **Anti-bruteforce** (авторизация: 1 req/s)
+- ✅ **SQL injection фильтрация**
+- ✅ **Path traversal защита**
+- ✅ **Connection limiting** (10 соединений/IP)
 - ✅ JWT RS256 с RSA ключами
-- ✅ CORS ограничен продакшн доменом
-- ✅ Rate limiting (API: 10 req/s, Auth: 5 req/s)
 - ✅ Security headers (HSTS, XSS, CSRF)
 - ✅ Swagger/ReDoc отключены в продакшне
-- ✅ DEBUG = False для продакшна
 
 ### **🚀 Performance:**
 - ✅ Multi-stage Docker builds
