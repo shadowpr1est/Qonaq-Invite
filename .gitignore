@@ -1,0 +1,41 @@
+# 🐍 Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+
+# 📦 Environment
+.venv/
+.env
+.env.*
+
+# 📁 Alembic
+alembic/versions/
+
+# 🔐 Ключи (JWT, SSH и т.д.)
+*.pem
+certs/*.pem
+
+# ⚙️ VSCode / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 🧪 Pytest
+.pytest_cache/
+.cache/
+.coverage
+
+# 📚 MyPy / Pylint / Ruff
+.mypy_cache/
+.pylint.d/
+ruff_cache/
+
+# 💡 Docker
+*.db
+*.sqlite3
+*.pid
