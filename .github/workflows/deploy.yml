@@ -23,6 +23,7 @@ jobs:
             cd /home/sem1colonn/Qonaq-Invite
             git pull origin main
             docker-compose down
+            docker rm -f invitly_frontend invitly_backend invitly_nginx invitly_db 2>/dev/null || true
             docker-compose pull
             docker-compose up --build -d
             docker-compose exec -T backend alembic upgrade head
