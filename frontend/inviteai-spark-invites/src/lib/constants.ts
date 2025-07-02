@@ -1,17 +1,20 @@
 // API Configuration
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+// Google Analytics
+export const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID || '';
+
 // App Information
-export const APP_NAME = import.meta.env.VITE_APP_NAME || 'FluentAI';
+export const APP_NAME = import.meta.env.VITE_APP_NAME || 'InvitlyAI';
 export const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.0';
 
 // Local Storage Keys
 export const STORAGE_KEYS = {
-  USER: 'fluent_ai_user',
-  TOKEN: 'fluent_ai_token',
-  REFRESH_TOKEN: 'fluent_ai_refresh_token',
-  THEME: 'fluent_ai_theme',
-  SETTINGS: 'fluent_ai_settings',
+  USER: 'invitly_ai_user',
+  TOKEN: 'invitly_ai_token',
+  REFRESH_TOKEN: 'invitly_ai_refresh_token',
+  THEME: 'invitly_ai_theme',
+  SETTINGS: 'invitly_ai_settings',
 } as const;
 
 // API Endpoints - synchronized with backend
