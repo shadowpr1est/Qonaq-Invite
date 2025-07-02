@@ -1,5 +1,5 @@
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // App Information
 export const APP_NAME = import.meta.env.VITE_APP_NAME || 'FluentAI';
