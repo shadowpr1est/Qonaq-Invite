@@ -20,9 +20,9 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd Qonaq-Invite
-            git remote set-url origin git@github.com:shadowpr1est/Qonaq-Invite.git
+            cd /home/sem1colonn/Qonaq-Invite
             git pull origin main
+            docker-compose down
             docker-compose pull
             docker-compose up --build -d
-            docker-compose exec -T backend alembic upgrade head
+            docker compose run --rm backend alembic upgrade head
