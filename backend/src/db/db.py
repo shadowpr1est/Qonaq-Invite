@@ -37,5 +37,6 @@ async def init_db():
     async with engine.begin() as conn:
         # Import all models here to ensure they are registered
         from src.users.models import User
-        await conn.run_sync(Base.metadata.create_all)
+        # Отключено: таблицы создаются через Alembic миграции
+        # await conn.run_sync(Base.metadata.create_all)
 
