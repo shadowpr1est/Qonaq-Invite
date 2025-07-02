@@ -26,16 +26,16 @@ def upgrade() -> None:
     # Update existing records with default content_details
     connection = op.get_bind()
     connection.execute(sa.text("""
-        UPDATE sites 
-        SET content_details = '{
-            "event_title": "' || title || '",
-            "description": "Детали события",
-            "contact_name": "",
-            "contact_email": "",
-            "contact_phone": ""
-        }'::json
-        WHERE content_details IS NULL
-    """))
+    UPDATE sites
+    SET content_details = json_build_object(
+        'event_title', title,
+        'description', 'Детали события',
+        'contact_name', '',
+        'contact_email', '',
+        'contact_phone', ''
+    )
+    WHERE content_details IS NULL
+"""))
     
     # Now make the column NOT NULL
     op.alter_column('sites', 'content_details', nullable=False)
