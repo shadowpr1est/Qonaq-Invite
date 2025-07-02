@@ -25,4 +25,4 @@ jobs:
             docker-compose down
             docker-compose pull
             docker-compose up --build -d
-            docker compose run --rm backend alembic upgrade head
+            docker compose run -T backend alembic upgrade head
