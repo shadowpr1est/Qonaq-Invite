@@ -21,6 +21,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd Qonaq-Invite
+            git remote set-url origin git@github.com:shadowpr1est/Qonaq-Invite.git
             git pull origin main
             docker-compose pull
             docker-compose up --build -d
