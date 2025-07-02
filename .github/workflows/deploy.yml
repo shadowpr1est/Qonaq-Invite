@@ -24,4 +24,4 @@ jobs:
             git pull origin main
             docker-compose pull
             docker-compose up --build -d
-            docker-compose exec backend alembic upgrade head
+            docker-compose exec -T backend alembic upgrade head
