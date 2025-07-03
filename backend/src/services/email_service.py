@@ -15,11 +15,12 @@ class EmailService:
     """Email service for sending verification and notification emails"""
     
     def __init__(self):
-        # For production, add these to config.py and .env
-        self.smtp_server = "smtp.gmail.com"
-        self.smtp_port = 587
-        self.sender_email = getattr(settings, 'SMTP_EMAIL', None)
-        self.sender_password = getattr(settings, 'SMTP_PASSWORD', None)
+        # Use settings from config
+        self.smtp_server = settings.SMTP_HOST
+        self.smtp_port = settings.SMTP_PORT
+        self.sender_email = settings.SMTP_EMAIL
+        self.sender_password = settings.SMTP_PASSWORD
+        self.sender_name = settings.SMTP_FROM_NAME
         
     def _create_verification_email_html(self, user_name: str, verification_link: str) -> str:
         """Create beautiful HTML email for verification"""

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 import { 
   Mail, 
   AlertCircle, 
@@ -23,11 +24,17 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
+  const [isDismissed, setIsDismissed] = useLocalStorage('verification_banner_dismissed', false);
 
-  // Показываем только если пользователь авторизован и email не верифицирован
-  if (!user || user.is_email_verified) {
+  // Показываем только если пользователь авторизован, email не верифицирован и баннер не скрыт
+  if (!user || user.is_email_verified || isDismissed) {
     return null;
   }
+
+  const handleDismiss = () => {
+    setIsDismissed(true);
+    onDismiss?.();
+  };
 
   const handleResendVerification = async () => {
     if (!user?.email) return;
@@ -57,95 +64,78 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -50 }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className="relative z-50"
+        className="relative z-50 mx-4"
       >
-        <Alert className="border-amber-200 bg-amber-50 shadow-md">
-          <div className="flex items-start gap-3">
-            <Mail className="h-5 w-5 text-amber-600 mt-0.5" />
+        <Alert className="border-amber-200 bg-amber-50/90 backdrop-blur-sm shadow-sm max-w-2xl mx-auto">
+          <div className="flex items-center gap-3">
+            <Mail className="h-4 w-4 text-amber-600 shrink-0" />
             
             <div className="flex-1 min-w-0">
-              <AlertDescription className="text-amber-800">
-                <div className="space-y-2">
-                  <div className="font-medium">
-                    📧 Подтвердите ваш email адрес
-                  </div>
-                  <div className="text-sm">
-                    Мы отправили письмо с подтверждением на{' '}
-                    <span className="font-medium">{user.email}</span>.
-                    Пожалуйста, проверьте почту и перейдите по ссылке для активации аккаунта.
-                  </div>
-                  
-                  {/* Состояния отправки */}
-                  <AnimatePresence mode="wait">
-                    {resendSuccess ? (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="flex items-center gap-2 text-green-700 bg-green-100 px-3 py-2 rounded-md"
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        <span className="text-sm font-medium">
-                          Письмо отправлено повторно!
-                        </span>
-                      </motion.div>
-                    ) : resendError ? (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="flex items-center gap-2 text-red-700 bg-red-100 px-3 py-2 rounded-md"
-                      >
-                        <AlertCircle className="h-4 w-4" />
-                        <span className="text-sm">{resendError}</span>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-3 pt-1"
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleResendVerification}
-                          disabled={isResending || isLoading}
-                          className="h-8 text-amber-700 border-amber-300 hover:bg-amber-100"
-                        >
-                          {isResending ? (
-                            <>
-                              <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                              Отправляем...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="w-3 h-3 mr-2" />
-                              Отправить повторно
-                            </>
-                          )}
-                        </Button>
-                        
-                        <span className="text-xs text-amber-600">
-                          Не получили письмо? Проверьте спам.
-                        </span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+              <AlertDescription className="text-amber-800 text-sm">
+                <div className="flex items-center gap-2">
+                  <span>
+                    Подтвердите email для доступа ко всем функциям.
+                  </span>
+                  {!resendSuccess && !resendError && !isResending && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleResendVerification}
+                      disabled={isResending || isLoading}
+                      className="h-6 px-2 text-xs text-amber-700 hover:bg-amber-100"
+                    >
+                      {isResending ? (
+                        <>
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          Отправка...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          Отправить снова
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
+                
+                {/* Состояния отправки */}
+                <AnimatePresence mode="wait">
+                  {resendSuccess && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex items-center gap-1 text-green-700 text-xs mt-1"
+                    >
+                      <CheckCircle className="h-3 w-3" />
+                      <span>Письмо отправлено!</span>
+                    </motion.div>
+                  )}
+                  {resendError && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex items-center gap-1 text-red-700 text-xs mt-1"
+                    >
+                      <AlertCircle className="h-3 w-3" />
+                      <span>{resendError}</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </AlertDescription>
             </div>
             
             {/* Кнопка закрытия */}
-            {onDismiss && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onDismiss}
-                className="h-8 w-8 p-0 text-amber-600 hover:bg-amber-100"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDismiss}
+              className="h-6 w-6 p-0 text-amber-600 hover:bg-amber-100"
+            >
+              <X className="h-3 w-3" />
+            </Button>
           </div>
         </Alert>
       </motion.div>

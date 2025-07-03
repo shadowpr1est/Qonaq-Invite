@@ -78,6 +78,13 @@ class Settings(BaseSettings):
     # OpenAI Configuration
     OPENAI_API_KEY: str = Field(env="OPENAI_API_KEY")
     
+    # SMTP Configuration
+    SMTP_HOST: str = Field(default="smtp.gmail.com", env="SMTP_HOST")
+    SMTP_PORT: int = Field(default=587, env="SMTP_PORT")
+    SMTP_EMAIL: str = Field(env="SMTP_EMAIL")
+    SMTP_PASSWORD: str = Field(env="SMTP_PASSWORD")
+    SMTP_FROM_NAME: str = Field(default="Invitly", env="SMTP_FROM_NAME")
+    
     @property
     def private_key(self) -> str:
         """Load RSA private key for JWT signing"""

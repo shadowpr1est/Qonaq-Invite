@@ -169,7 +169,7 @@ const Signup = () => {
           }}
           className="relative z-10"
         >
-          <Card className="w-full min-w-0 sm:min-w-[320px] md:min-w-[400px] lg:min-w-[460px] max-w-[640px] shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+          <Card className="w-full max-w-[640px] shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="text-center px-4 sm:px-8 md:px-12 py-8 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-t-lg">
               <motion.div
                 initial={{ scale: 0 }}
