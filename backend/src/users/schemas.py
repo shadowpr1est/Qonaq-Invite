@@ -18,6 +18,24 @@ class UserLogin(BaseModel):
     remember: Optional[bool] = Field(default=False, description="Remember me option")
 
 
+class GoogleOAuthCreate(BaseModel):
+    """Schema for Google OAuth user creation"""
+    email: EmailStr = Field(..., description="User email from Google")
+    name: str = Field(..., description="User name from Google")
+    google_id: str = Field(..., description="Google user ID")
+    avatar: Optional[str] = Field(None, description="Avatar URL from Google")
+
+
+class EmailVerificationRequest(BaseModel):
+    """Schema for email verification request"""
+    email: EmailStr = Field(..., description="User email to verify")
+
+
+class EmailVerificationConfirm(BaseModel):
+    """Schema for email verification confirmation"""
+    token: str = Field(..., description="Email verification token")
+
+
 class User(BaseModel):
     """Base User schema - matches frontend User interface exactly"""
     id: str
@@ -25,21 +43,21 @@ class User(BaseModel):
     name: str
     avatar: Optional[str] = None
     bio: Optional[str] = None
+    is_email_verified: Optional[bool] = None
 
     class Config:
         from_attributes = True
 
 
 class UserResponse(User):
-    """Schema for user data response - inherits from User to ensure consistency"""
+    """User response schema with all safe fields"""
     pass
 
 
-class UserProfile(User):
-    """Extended user profile - matches frontend UserProfile"""
-    avatar: Optional[str] = None
-    bio: Optional[str] = None
-    preferences: "UserPreferences"
+class UserProfile(UserResponse):
+    """Complete user profile with stats"""
+    stats: "UserStats"
+    settings: "UserSettings"
 
 
 class UserPreferences(BaseModel):
@@ -55,16 +73,23 @@ class NotificationSettings(BaseModel):
     push: bool = True
 
 
+class UserSettings(BaseModel):
+    """User settings schema"""
+    notifications: NotificationSettings = NotificationSettings()
+    theme: str = Field(default="light", pattern="^(light|dark)$")
+    language: str = Field(default="ru", pattern="^(en|ru)$")
+
+
 class UserUpdate(BaseModel):
-    """Schema for user update"""
-    name: Optional[str] = Field(None, min_length=2, max_length=100)
-    avatar: Optional[str] = None
-    bio: Optional[str] = Field(None, max_length=500)
+    """Schema for updating user profile"""
+    name: Optional[str] = Field(None, min_length=2, max_length=100, description="Full name")
+    bio: Optional[str] = Field(None, max_length=500, description="User bio")
+    avatar: Optional[str] = Field(None, description="Avatar URL")
 
 
 class ChangePasswordRequest(BaseModel):
-    """Schema for password change"""
-    currentPassword: str = Field(..., description="Current password")
+    """Schema for password change request"""
+    currentPassword: str = Field(..., min_length=6, description="Current password")
     newPassword: str = Field(..., min_length=8, description="New password")
 
 
@@ -84,22 +109,18 @@ class Token(BaseModel):
 
 
 class ApiResponse(BaseModel):
-    """Standard API response wrapper - matches frontend ApiResponse"""
-    data: dict
-    message: str
+    """Generic API response"""
+    data: dict = {}
+    message: str = ""
     success: bool = True
 
 
 class UserStats(BaseModel):
-    """Schema for user statistics"""
-    total_analyses: int = Field(..., ge=0, description="Total number of analyses")
-    completed_analyses: int = Field(..., ge=0, description="Number of completed analyses")
-    average_score: Optional[float] = Field(None, ge=0, le=100, description="Average overall score")
-    total_practice_time: int = Field(..., ge=0, description="Total practice time in minutes")
-    current_streak: int = Field(..., ge=0, description="Current practice streak in days")
-    best_streak: int = Field(..., ge=0, description="Best practice streak in days")
-    improvement_rate: Optional[float] = Field(None, description="Improvement rate percentage")
-    join_date: datetime = Field(..., description="User registration date")
+    """User statistics schema"""
+    total_sites: int = 0
+    total_views: int = 0
+    total_interactions: int = 0
+    most_popular_theme: Optional[str] = None
 
 
 class TokenData(BaseModel):
@@ -117,5 +138,5 @@ class ForgotPasswordRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     """Schema for password reset request"""
-    token: str = Field(..., description="Password reset token")
+    token: str = Field(..., description="Reset token")
     new_password: str = Field(..., min_length=8, description="New password") 

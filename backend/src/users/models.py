@@ -26,7 +26,7 @@ class User(Base):
     )
     hashed_password = Column(
         String(255), 
-        nullable=False
+        nullable=True  # Allow null for OAuth users
     )
     avatar = Column(
         String(500),
@@ -40,6 +40,26 @@ class User(Base):
         Boolean, 
         default=True, 
         nullable=False
+    )
+    # Email verification fields
+    is_email_verified = Column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+    email_verification_token = Column(
+        String(255),
+        nullable=True
+    )
+    # OAuth fields
+    google_id = Column(
+        String(255),
+        nullable=True,
+        unique=True
+    )
+    oauth_provider = Column(
+        String(50),
+        nullable=True
     )
     created_at = Column(
         DateTime, 
@@ -63,5 +83,6 @@ class User(Base):
             "email": self.email,
             "name": self.name,
             "avatar": self.avatar,
-            "bio": self.bio
+            "bio": self.bio,
+            "is_email_verified": self.is_email_verified
         } 
