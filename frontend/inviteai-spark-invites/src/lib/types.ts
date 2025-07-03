@@ -5,6 +5,7 @@ export interface User {
   name: string;
   avatar?: string;
   bio?: string;
+  is_email_verified?: boolean;
 }
 
 export interface UserProfile extends User {
@@ -48,6 +49,23 @@ export interface AuthResponse {
   refresh_token: string;
   token_type: string;
   user: User;
+}
+
+// Google OAuth Types
+export interface GoogleOAuthRequest {
+  email: string;
+  name: string;
+  google_id: string;
+  avatar?: string;
+}
+
+// Email Verification Types
+export interface EmailVerificationRequest {
+  email: string;
+}
+
+export interface EmailVerificationConfirm {
+  token: string;
 }
 
 // API Types

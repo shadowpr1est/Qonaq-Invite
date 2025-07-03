@@ -216,7 +216,7 @@ const ResetPassword: React.FC = () => {
           
           <CardContent className="p-8">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <AnimatePresence mode="wait">
+              <AnimatePresence mode="sync">
                 {error && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}

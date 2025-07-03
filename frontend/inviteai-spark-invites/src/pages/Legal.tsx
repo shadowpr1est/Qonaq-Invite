@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
@@ -8,7 +7,7 @@ const Legal = () => {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Назад
@@ -20,15 +19,15 @@ const Legal = () => {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Правовая информация</h1>
-          <p className="text-xl text-muted-foreground">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
+        <div className="text-center mb-8 md:mb-12">
+          <h1 className="text-2xl md:text-4xl font-bold mb-2 md:mb-4">Правовая информация</h1>
+          <p className="text-base md:text-xl text-muted-foreground">
             Условия использования и политика конфиденциальности
           </p>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-4 md:space-y-8">
           {/* Terms of Service */}
           <Card>
             <CardHeader>
@@ -147,9 +146,9 @@ const Legal = () => {
         </div>
 
         {/* Bottom CTA */}
-        <div className="text-center mt-12">
+        <div className="text-center mt-8 md:mt-12">
           <Card className="bg-gradient-brand text-white border-0">
-            <CardContent className="p-8">
+            <CardContent className="p-4 md:p-8">
               <h3 className="text-2xl font-bold mb-4">Есть вопросы?</h3>
               <p className="mb-6 text-white/90">
                 Наша команда поддержки готова помочь вам

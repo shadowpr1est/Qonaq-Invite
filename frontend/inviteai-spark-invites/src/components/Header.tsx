@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
+import { EmailVerificationBanner } from '@/components/EmailVerificationBanner';
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -91,7 +92,8 @@ const Header = () => {
   };
 
   return (
-    <motion.header
+    <>
+      <motion.header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled 
           ? 'bg-brand-500 shadow-lg' 
@@ -276,9 +278,7 @@ const Header = () => {
                     key={link.label}
                     href={link.href}
                     onClick={(e) => handleNavClick(link, e)}
-                    className={`block font-medium transition-colors hover:opacity-80 cursor-pointer ${
-                      isScrolled ? 'text-white' : 'text-muted-foreground'
-                    }`}
+                    className={`block font-semibold transition-colors cursor-pointer text-brand-700 hover:text-brand-600 ${location.hash === link.href ? 'text-gradient' : ''}`}
                   >
                     {link.label}
                   </a>
@@ -390,11 +390,7 @@ const Header = () => {
                     <>
                       <Button 
                         variant="ghost"
-                        className={`w-full font-semibold transition-all ${
-                          isScrolled 
-                            ? 'text-white hover:bg-white/10' 
-                            : 'text-muted-foreground hover:bg-gray-100'
-                        }`}
+                        className={`w-full font-semibold border border-brand-100 bg-white/80 text-brand-700 hover:text-brand-600 hover:bg-brand-50 transition-all`}
                         onClick={() => {
                           setIsMobileMenuOpen(false);
                           window.location.href = '/login';
@@ -424,6 +420,12 @@ const Header = () => {
         </AnimatePresence>
       </div>
     </motion.header>
+    
+    {/* Email Verification Banner */}
+    <div className="fixed top-[72px] md:top-[80px] left-0 right-0 z-40">
+      <EmailVerificationBanner />
+    </div>
+    </>
   );
 };
 

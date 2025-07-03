@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/hooks/use-auth';
+import { GoogleOAuthButton } from '@/components/GoogleOAuthButton';
 
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,9 +23,9 @@ import {
   Eye, 
   EyeOff, 
   ArrowRight,
-  Sparkles,
   CheckCircle,
-  Loader2
+  Loader2,
+  User
 } from 'lucide-react';
 
 const loginSchema = z.object({
@@ -102,7 +103,7 @@ const Login = () => {
               transition={{ delay: 0.4 }}
               className="text-2xl font-bold text-gray-900 mb-2"
             >
-              Добро пожаловать! 🎉
+              Добро пожаловать!
             </motion.h2>
             <motion.p
               initial={{ y: 20, opacity: 0 }}
@@ -160,26 +161,23 @@ const Login = () => {
           }}
           className="relative z-10"
         >
-          <Card className="w-full max-w-[480px] shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="text-center px-8 py-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
+          <Card className="w-full min-w-0 sm:min-w-[320px] md:min-w-[400px] lg:min-w-[460px] max-w-[640px] shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center px-4 sm:px-8 md:px-12 py-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.3, type: "spring" }}
                 className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm"
               >
-                <Sparkles className="w-8 h-8 text-white" />
+                <User className="w-8 h-8 text-white" />
               </motion.div>
               <CardTitle className="text-3xl font-bold mb-2">
-                Добро пожаловать! 👋
+                Добро пожаловать!
               </CardTitle>
-              <CardDescription className="text-blue-100 text-lg">
-                Войдите в свой аккаунт для создания приглашений
-              </CardDescription>
             </CardHeader>
             
-            <CardContent className="px-8 py-8">
-              <AnimatePresence mode="wait">
+            <CardContent className="px-4 sm:px-8 md:px-12 py-8">
+              <AnimatePresence mode="sync">
                 {error && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -338,11 +336,12 @@ const Login = () => {
                 </form>
               </Form>
 
+              {/* Google OAuth Section */}
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
-                className="mt-8"
+                className="mt-6"
               >
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -350,23 +349,34 @@ const Login = () => {
                   </div>
                   <div className="relative flex justify-center text-sm">
                     <span className="px-4 bg-white text-gray-500 font-medium">
-                      Еще нет аккаунта?
+                      или войти через
                     </span>
                   </div>
-              </div>
+                </div>
                 
-                <div className="mt-6">
-                  <Button 
-                    asChild
-                    variant="outline"
-                    className="w-full h-12 text-base font-medium border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
+                <div className="mt-4">
+                  <GoogleOAuthButton 
+                    mode="login" 
+                    disabled={isLoading}
+                  />
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.9 }}
+                className="mt-6 text-center"
+              >
+                <p className="text-sm text-gray-600">
+                  Нет аккаунта?{' '}
+                  <Link 
+                    to="/signup" 
+                    className="font-medium text-blue-600 hover:text-blue-700 transition-colors hover:underline"
                   >
-                    <Link to="/signup" className="flex items-center gap-2">
-                      Создать новый аккаунт
-                      <Sparkles className="w-4 h-4" />
-                    </Link>
-                  </Button>
-              </div>
+                    Зарегистрироваться
+                  </Link>
+                </p>
               </motion.div>
             </CardContent>
           </Card>

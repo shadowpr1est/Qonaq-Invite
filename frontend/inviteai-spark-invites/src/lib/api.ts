@@ -5,6 +5,8 @@ import type {
   SignupRequest, 
   ForgotPasswordRequest, 
   ResetPasswordRequest,
+  GoogleOAuthRequest,
+  AuthResponse,
   SiteGenerationRequest,
   GeneratedSite,
   UserSitesResponse,
@@ -126,6 +128,36 @@ class ApiClient {
 
   async getCurrentUser(): Promise<User> {
     return this.request('/auth/profile');
+  }
+
+  // Google OAuth
+  async googleOAuth(data: GoogleOAuthRequest): Promise<AuthResponse> {
+    return this.request('/auth/google-oauth', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Email Verification
+  async verifyEmail(token: string): Promise<{ message: string; success: boolean }> {
+    return this.request('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  }
+
+  async resendVerificationEmail(email: string): Promise<{ message: string; success: boolean }> {
+    return this.request('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  // Refresh Token
+  async refreshToken(refreshToken: string): Promise<{ access_token: string; refresh_token: string }> {
+    return this.request(`/auth/refresh?refresh_token=${refreshToken}`, {
+      method: 'POST',
+    });
   }
 
   async updateProfile(data: Partial<User>): Promise<User> {

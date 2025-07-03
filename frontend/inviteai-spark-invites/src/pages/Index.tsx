@@ -1,4 +1,3 @@
-
 import MainLayout from '@/components/MainLayout';
 import Hero from '@/components/Hero';
 import HowItWorks from '@/components/HowItWorks';
@@ -8,7 +7,7 @@ import Footer from '@/components/Footer';
 
 const Index = () => {
   return (
-    <MainLayout>
+    <MainLayout className="px-4 sm:px-6 lg:px-8">
       <Hero />
       <HowItWorks />
       <SocialProof />

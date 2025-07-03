@@ -256,213 +256,218 @@ const SiteViewer = () => {
   }
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-50">
-      {/* Левая панель: GPT Чат (30%) */}
-      <div className="w-[30%] bg-white border-r border-gray-200 flex flex-col min-h-0">
-        {/* Заголовок чата */}
-        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-blue-600">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h2 className="text-white font-semibold">AI Редактор</h2>
-                <p className="text-white/80 text-xs">Изменяйте приглашение голосом или текстом</p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/dashboard')}
-              className="text-white hover:bg-white/20"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Чат сообщения */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {chatMessages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                  message.isUser
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-800 border'
-                }`}
-              >
-                {message.text}
-                <div className={`text-xs mt-1 opacity-70`}>
-                  {message.timestamp.toLocaleTimeString('ru-RU', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
-                </div>
-              </div>
-            </div>
-          ))}
-          
-          {isProcessingChat && (
-            <div className="flex justify-start">
-              <div className="bg-gray-100 border px-4 py-3 rounded-2xl text-sm">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-12 md:pt-24 pb-4 md:pb-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="h-screen flex overflow-hidden bg-gray-50">
+          {/* Левая панель: GPT Чат (30%) */}
+          <div className="w-[30%] bg-white border-r border-gray-200 flex flex-col min-h-0">
+            {/* Заголовок чата */}
+            <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-blue-600">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-white" />
                   </div>
-                  <span className="text-gray-600">GPT анализирует...</span>
-                  <Sparkles className="w-4 h-4 text-purple-500 animate-pulse" />
+                  <div>
+                    <h2 className="text-white font-semibold">AI Редактор</h2>
+                    <p className="text-white/80 text-xs">Изменяйте приглашение голосом или текстом</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/dashboard')}
+                  className="text-white hover:bg-white/20"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Чат сообщения */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {chatMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                      message.isUser
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-800 border'
+                    }`}
+                  >
+                    {message.text}
+                    <div className={`text-xs mt-1 opacity-70`}>
+                      {message.timestamp.toLocaleTimeString('ru-RU', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {isProcessingChat && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-100 border px-4 py-3 rounded-2xl text-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                      <span className="text-gray-600">GPT анализирует...</span>
+                      <Sparkles className="w-4 h-4 text-purple-500 animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Ввод сообщения */}
+            <div className="p-4 pb-6 border-t border-gray-200 bg-gray-50">
+              <form onSubmit={handleChatSubmit} className="space-y-3">
+                <div className="flex gap-2">
+                  <Input
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder={liveHtmlContent 
+                      ? "Опишите изменения: 'Сделай ярче', 'Поменяй шрифт', 'Добавь анимации'..."
+                      : "Загружаю приглашение..."
+                    }
+                    className="flex-1 border-gray-300 focus:border-purple-500"
+                    disabled={isProcessingChat || !liveHtmlContent}
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={!chatInput.trim() || isProcessingChat || !liveHtmlContent}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-4"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          {/* Правая панель: Live Preview (70%) */}
+          <div className="w-[70%] flex flex-col min-h-0 overflow-auto">
+            {/* Панель управления превью */}
+            <div className="p-4 bg-white border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <h1 className="text-lg font-semibold text-gray-900">
+                    Live Preview
+                  </h1>
+                  
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    {isUpdatingPreview ? (
+                      <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        Обновляется...
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        Live
+                      </span>
+                    )}
+                    
+                    {site.is_published ? (
+                      <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                        Опубликовано
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                        Черновик
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  {/* Переключатель Desktop / Mobile */}
+                  <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+                    <Button
+                      variant={previewMode === 'desktop' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setPreviewMode('desktop')}
+                      className="px-3 py-1 h-auto text-xs"
+                    >
+                      <Monitor className="w-4 h-4 mr-1" />
+                      Desktop
+                    </Button>
+                    <Button
+                      variant={previewMode === 'mobile' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setPreviewMode('mobile')}
+                      className="px-3 py-1 h-auto text-xs"
+                    >
+                      <Smartphone className="w-4 h-4 mr-1" />
+                      Mobile
+                    </Button>
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShare}
+                    className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                  >
+                    <Share2 className="w-4 h-4 mr-1" />
+                    Поделиться
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    onClick={() => setIsFullscreen(true)}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-1" />
+                    Открыть
+                  </Button>
                 </div>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Ввод сообщения */}
-        <div className="p-4 pb-6 border-t border-gray-200 bg-gray-50">
-          <form onSubmit={handleChatSubmit} className="space-y-3">
-            <div className="flex gap-2">
-              <Input
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder={liveHtmlContent 
-                  ? "Опишите изменения: 'Сделай ярче', 'Поменяй шрифт', 'Добавь анимации'..."
-                  : "Загружаю приглашение..."
-                }
-                className="flex-1 border-gray-300 focus:border-purple-500"
-                disabled={isProcessingChat || !liveHtmlContent}
-              />
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!chatInput.trim() || isProcessingChat || !liveHtmlContent}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-4"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      {/* Правая панель: Live Preview (70%) */}
-      <div className="w-[70%] flex flex-col min-h-0 overflow-auto">
-        {/* Панель управления превью */}
-        <div className="p-4 bg-white border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h1 className="text-lg font-semibold text-gray-900">
-                Live Preview
-              </h1>
-                             <div className="flex items-center gap-3 text-sm text-gray-600">
-                 {isUpdatingPreview ? (
-                   <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                     Обновляется...
-                   </span>
-                 ) : (
-                   <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                     Live
-                   </span>
-                 )}
-                 
-                 {site.is_published ? (
-                   <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
-                     <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                     Опубликовано
-                   </span>
-                 ) : (
-                   <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
-                     <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                     Черновик
-                   </span>
-                 )}
-               </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              {/* Переключатель Desktop / Mobile */}
-              <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-                <Button
-                  variant={previewMode === 'desktop' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setPreviewMode('desktop')}
-                  className="px-3 py-1 h-auto text-xs"
-                >
-                  <Monitor className="w-4 h-4 mr-1" />
-                  Desktop
-                </Button>
-                <Button
-                  variant={previewMode === 'mobile' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setPreviewMode('mobile')}
-                  className="px-3 py-1 h-auto text-xs"
-                >
-                  <Smartphone className="w-4 h-4 mr-1" />
-                  Mobile
-                </Button>
-              </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShare}
-                className="text-purple-600 border-purple-200 hover:bg-purple-50"
-              >
-                <Share2 className="w-4 h-4 mr-1" />
-                Поделиться
-              </Button>
-              
-              <Button
-                size="sm"
-                onClick={() => setIsFullscreen(true)}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700"
-              >
-                <ExternalLink className="w-4 h-4 mr-1" />
-                Открыть
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Live Preview контейнер */}
-        <div className={`flex-1 bg-gray-100 p-4 overflow-visible min-h-0 flex flex-col ${
-          previewMode === 'mobile' ? 'items-center' : ''
-        }`}>
-          <div className={`h-full bg-white rounded-lg shadow-lg overflow-hidden flex flex-col ${
-            previewMode === 'mobile' ? 'max-w-sm w-full' : 'w-full'
-          }`}>
-            {/* Адресная строка симуляция */}
-            <div className="bg-gray-200 px-4 py-2 flex items-center gap-3 text-xs text-gray-600 rounded-t-lg">
-              <div className="flex gap-1">
-                <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-              </div>
-              <div className="bg-white rounded px-3 py-1 flex-1 text-gray-700">
-                {site.is_published 
-                  ? `invitely.app/e/${site.slug}`
-                  : `${window.location.host}/preview`
-                }
+            {/* Live Preview контейнер */}
+            <div className={`flex-1 bg-gray-100 p-4 overflow-visible min-h-0 flex flex-col ${
+              previewMode === 'mobile' ? 'items-center' : ''
+            }`}>
+              <div className={`h-full bg-white rounded-lg shadow-lg overflow-hidden flex flex-col ${
+                previewMode === 'mobile' ? 'max-w-sm w-full' : 'w-full'
+              }`}>
+                {/* Адресная строка симуляция */}
+                <div className="bg-gray-200 px-4 py-2 flex items-center gap-3 text-xs text-gray-600 rounded-t-lg">
+                  <div className="flex gap-1">
+                    <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                    <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                  </div>
+                  <div className="bg-white rounded px-3 py-1 flex-1 text-gray-700">
+                    {site.is_published 
+                      ? `invitely.app/e/${site.slug}`
+                      : `${window.location.host}/preview`
+                    }
+                  </div>
+                </div>
+                
+                {/* Живой HTML сайт */}
+                <LivePreviewFrame
+                  html={liveHtmlContent}
+                  mode={previewMode}
+                  onModeChange={setPreviewMode}
+                  toolbar={null}
+                  className="h-full rounded-t-none"
+                  minHeight={600}
+                />
               </div>
             </div>
-            
-                             {/* Живой HTML сайт */}
-             <LivePreviewFrame
-               html={liveHtmlContent}
-               mode={previewMode}
-               onModeChange={setPreviewMode}
-               toolbar={null}
-               className="h-full rounded-t-none"
-               minHeight={600}
-             />
           </div>
         </div>
       </div>

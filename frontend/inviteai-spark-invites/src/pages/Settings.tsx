@@ -151,17 +151,17 @@ const Settings = () => {
   return (
     <MainLayout>
       <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-blue-50 pt-24 pb-16">
-        <div className="max-w-4xl mx-auto px-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
+            className="text-center mb-4 md:mb-8"
           >
-            <h1 className="text-4xl font-bold font-display mb-2">
+            <h1 className="text-2xl md:text-4xl font-bold font-display mb-2 md:mb-4">
               <span className="text-gradient">Настройки</span>
             </h1>
-            <p className="text-muted-foreground">Управляйте вашими предпочтениями и безопасностью</p>
+            <p className="text-base md:text-lg text-muted-foreground">Управляйте вашими предпочтениями и безопасностью</p>
           </motion.div>
 
           <div className="space-y-8">

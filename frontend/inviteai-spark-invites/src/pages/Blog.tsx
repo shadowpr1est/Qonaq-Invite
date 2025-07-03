@@ -42,19 +42,19 @@ const Blog = () => {
   return (
     <MainLayout>
       <div className="min-h-screen bg-gradient-to-br from-brand-50 to-white pt-24 md:pt-28">
-        <div className="max-w-7xl mx-auto px-4 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
           {/* Header Section */}
-          <div className="text-center mb-16">
-            <h1 className="text-5xl font-bold mb-6">
+          <div className="text-center mb-8 md:mb-16">
+            <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-6">
               <span className="text-gradient">Блог</span> InviteAI
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-base md:text-xl text-muted-foreground max-w-3xl mx-auto">
               Советы по организации мероприятий, тренды дизайна и вдохновение для ваших праздников
             </p>
           </div>
 
           {/* Categories Filter */}
-          <div className="flex flex-wrap justify-center gap-4 mb-12">
+          <div className="flex flex-wrap justify-center gap-2 md:gap-4 mb-8 md:mb-12">
             {categories.map((category, index) => (
               <Button
                 key={category}
@@ -67,8 +67,8 @@ const Blog = () => {
           </div>
 
           {/* Featured Post */}
-          <Card className="mb-12 shadow-xl overflow-hidden">
-            <div className="grid lg:grid-cols-2">
+          <Card className="mb-8 md:mb-12 shadow-xl overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-2">
               <div className="h-64 lg:h-auto bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white">
                 <div className="text-center">
                   <div className="text-6xl mb-4">✨</div>
@@ -103,7 +103,7 @@ const Blog = () => {
           </Card>
 
           {/* Blog Posts Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 mb-8 md:mb-12">
             {blogPosts.slice(1).map((post) => (
               <Card key={post.id} className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer group">
                 <div className="h-48 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white">
@@ -144,8 +144,8 @@ const Blog = () => {
           </div>
 
           {/* Newsletter Signup */}
-          <Card className="bg-gradient-brand text-white border-0 shadow-xl">
-            <CardContent className="p-12 text-center">
+          <Card className="bg-gradient-brand text-white border-0 shadow-xl mt-8">
+            <CardContent className="p-6 md:p-12 text-center">
               <div className="text-5xl mb-6">📬</div>
               <h3 className="text-3xl font-bold mb-4">
                 Подпишитесь на рассылку
@@ -173,7 +173,7 @@ const Blog = () => {
           </Card>
 
           {/* Load More */}
-          <div className="text-center mt-12">
+          <div className="text-center mt-8 md:mt-12">
             <Button variant="outline" size="lg">
               Загрузить еще статьи
             </Button>

@@ -4,6 +4,9 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 // Google Analytics
 export const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID || 'G-19YR61WN34';
 
+// Google OAuth
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
 // App Information
 export const APP_NAME = import.meta.env.VITE_APP_NAME || 'InvitlyAI';
 export const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.0';

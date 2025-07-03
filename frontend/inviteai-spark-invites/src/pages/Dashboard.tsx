@@ -177,7 +177,7 @@ const Dashboard = () => {
   return (
     <MainLayout>
       <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white pt-24 pb-12">
-        <div className="container mx-auto px-4 max-w-7xl">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           
           {/* Заголовок и статистика */}
           <motion.div
@@ -185,12 +185,12 @@ const Dashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
               <div>
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-2 md:mb-4">
                   Добро пожаловать, {user.name}!
                 </h1>
-                <p className="text-xl text-gray-600">
+                <p className="text-base md:text-xl text-gray-600">
                   Управляйте своими событиями и отслеживайте отклики
                 </p>
               </div>
