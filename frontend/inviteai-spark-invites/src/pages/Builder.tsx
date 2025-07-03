@@ -1762,8 +1762,15 @@ const Builder = () => {
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <LoadingSpinner />
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
+          <div className="text-center">
+            <LoadingSpinner 
+              size="xl" 
+              variant="gradient" 
+              text="Загружаем ваш проект..."
+              className="mb-4"
+            />
+          </div>
         </div>
       </MainLayout>
     );
@@ -2351,115 +2358,127 @@ const Builder = () => {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="absolute inset-0 bg-gradient-to-br from-purple-50/95 to-blue-50/95 backdrop-blur-sm rounded-xl z-50 flex items-center justify-center"
+                      className="absolute inset-0 bg-gradient-to-br from-purple-50/98 to-blue-50/98 backdrop-blur-md rounded-xl z-50 flex items-center justify-center"
                     >
-                      <div className="text-center space-y-6 p-8 w-full max-w-md mx-auto">
-                        {/* Animated logo/icon */}
+                      <div className="text-center space-y-8 p-8 w-full max-w-md mx-auto">
+                        {/* Beautiful centered loading spinner */}
                         <div className="flex justify-center">
-                          <div className="relative w-24 h-24">
-                            <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl animate-pulse"></div>
-                            <div className="absolute inset-2 bg-white rounded-xl flex items-center justify-center">
-                              <Sparkles className="w-8 h-8 text-purple-500 animate-bounce" />
-                            </div>
-                          </div>
+                          <LoadingSpinner 
+                            size="xl" 
+                            variant="gradient"
+                            className="scale-125"
+                          />
                         </div>
                         
                         {/* Enhanced loading text */}
-                        <div className="space-y-3 text-center">
-                          <h3 className="text-2xl font-bold text-gray-800">
+                        <div className="space-y-4 text-center">
+                          <motion.h3 
+                            className="text-3xl font-bold text-gray-800"
+                            animate={{ opacity: [0.5, 1, 0.5] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                          >
                             Создаём ваш сайт
-                          </h3>
-                          <p className="text-gray-600 mx-auto">
+                          </motion.h3>
+                          <p className="text-gray-600 text-lg leading-relaxed max-w-sm mx-auto">
                             Наша ИИ генерирует уникальный дизайн специально для вашего события
                           </p>
                         </div>
                         
-                        {/* Advanced progress */}
+                        {/* Improved progress bar */}
                         <div className="space-y-4 w-full">
-                          <div className="bg-white/80 rounded-full p-1 shadow-inner mx-auto">
+                          <div className="bg-white/90 rounded-2xl p-2 shadow-lg">
                             <div 
-                              className="h-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500 ease-out relative overflow-hidden"
+                              className="h-4 bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 rounded-xl transition-all duration-700 ease-out relative overflow-hidden"
                               style={{ width: `${generationProgress}%` }}
                             >
-                              <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
+                              <div className="absolute inset-0 bg-white/20 animate-pulse rounded-xl"></div>
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
                             </div>
                           </div>
                           <div className="text-center space-y-2">
-                            <p className="text-lg font-semibold text-purple-600">
+                            <motion.p 
+                              className="text-2xl font-bold text-purple-600"
+                              animate={{ scale: [1, 1.05, 1] }}
+                              transition={{ duration: 1, repeat: Infinity }}
+                            >
                               {Math.round(generationProgress)}%
-                            </p>
+                            </motion.p>
                             {generationStatus && (
-                              <p className="text-sm text-gray-600 animate-pulse">
+                              <motion.p 
+                                className="text-base text-gray-700 font-medium"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                key={generationStatus}
+                              >
                                 {generationStatus}
-                              </p>
+                              </motion.p>
                             )}
                           </div>
                         </div>
                         
-                        {/* Loading steps indicator */}
-                        <div className="space-y-3 text-sm text-center">
-                          <div className={`flex items-center justify-center gap-2 transition-all duration-500 ${
-                            generationProgress >= 20 ? 'text-green-600 font-medium' : 
-                            generationProgress > 5 ? 'text-purple-600 font-medium animate-pulse' : 'text-gray-400'
+                        {/* Enhanced loading steps indicator */}
+                        <div className="space-y-4 text-sm">
+                          <div className={`flex items-center justify-center gap-3 transition-all duration-500 ${
+                            generationProgress >= 25 ? 'text-green-600 font-semibold' : 
+                            generationProgress > 10 ? 'text-purple-600 font-semibold' : 'text-gray-400'
                           }`}>
-                            {generationProgress >= 20 ? (
-                              <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                                <span className="text-white text-xs">✓</span>
-                              </div>
-                            ) : generationProgress > 5 ? (
-                              <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                            {generationProgress >= 25 ? (
+                              <motion.div 
+                                className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: "spring", stiffness: 500 }}
+                              >
+                                <span className="text-white text-sm font-bold">✓</span>
+                              </motion.div>
+                            ) : generationProgress > 10 ? (
+                              <div className="w-6 h-6 border-3 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                             ) : (
-                              <div className="w-5 h-5 bg-gray-300 rounded-full"></div>
+                              <div className="w-6 h-6 bg-gray-300 rounded-full"></div>
                             )}
-                            Анализ контента
+                            <span className="text-base">Анализ контента</span>
                           </div>
                           
-                          <div className={`flex items-center justify-center gap-2 transition-all duration-500 ${
-                            generationProgress >= 45 ? 'text-green-600 font-medium' : 
-                            generationProgress > 20 ? 'text-purple-600 font-medium animate-pulse' : 'text-gray-400'
+                          <div className={`flex items-center justify-center gap-3 transition-all duration-500 ${
+                            generationProgress >= 55 ? 'text-green-600 font-semibold' : 
+                            generationProgress > 25 ? 'text-purple-600 font-semibold' : 'text-gray-400'
                           }`}>
-                            {generationProgress >= 45 ? (
-                              <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                                <span className="text-white text-xs">✓</span>
-                              </div>
-                            ) : generationProgress > 20 ? (
-                              <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                            {generationProgress >= 55 ? (
+                              <motion.div 
+                                className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: "spring", stiffness: 500 }}
+                              >
+                                <span className="text-white text-sm font-bold">✓</span>
+                              </motion.div>
+                            ) : generationProgress > 25 ? (
+                              <div className="w-6 h-6 border-3 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                             ) : (
-                              <div className="w-5 h-5 bg-gray-300 rounded-full"></div>
+                              <div className="w-6 h-6 bg-gray-300 rounded-full"></div>
                             )}
-                            Выбор цветовой схемы
+                            <span className="text-base">Создание дизайна</span>
                           </div>
                           
-                          <div className={`flex items-center justify-center gap-2 transition-all duration-500 ${
-                            generationProgress >= 70 ? 'text-green-600 font-medium' : 
-                            generationProgress > 45 ? 'text-purple-600 font-medium animate-pulse' : 'text-gray-400'
+                          <div className={`flex items-center justify-center gap-3 transition-all duration-500 ${
+                            generationProgress >= 85 ? 'text-green-600 font-semibold' : 
+                            generationProgress > 55 ? 'text-purple-600 font-semibold' : 'text-gray-400'
                           }`}>
-                            {generationProgress >= 70 ? (
-                              <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                                <span className="text-white text-xs">✓</span>
-                              </div>
-                            ) : generationProgress > 45 ? (
-                              <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                            {generationProgress >= 85 ? (
+                              <motion.div 
+                                className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: "spring", stiffness: 500 }}
+                              >
+                                <span className="text-white text-sm font-bold">✓</span>
+                              </motion.div>
+                            ) : generationProgress > 55 ? (
+                              <div className="w-6 h-6 border-3 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                             ) : (
-                              <div className="w-5 h-5 bg-gray-300 rounded-full"></div>
+                              <div className="w-6 h-6 bg-gray-300 rounded-full"></div>
                             )}
-                            Создание макета
-                          </div>
-                          
-                          <div className={`flex items-center justify-center gap-2 transition-all duration-500 ${
-                            generationProgress >= 90 ? 'text-green-600 font-medium' : 
-                            generationProgress > 70 ? 'text-purple-600 font-medium animate-pulse' : 'text-gray-400'
-                          }`}>
-                            {generationProgress >= 90 ? (
-                              <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                                <span className="text-white text-xs">✓</span>
-                              </div>
-                            ) : generationProgress > 70 ? (
-                              <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                              <div className="w-5 h-5 bg-gray-300 rounded-full"></div>
-                            )}
-                            Финальная оптимизация
+                            <span className="text-base">Оптимизация</span>
                           </div>
                         </div>
                       </div>

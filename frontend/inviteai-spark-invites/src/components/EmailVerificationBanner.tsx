@@ -75,27 +75,27 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
                 <div className="flex items-center gap-2">
                   <span>
                     Подтвердите email для доступа ко всем функциям.
-                  </span>
+                        </span>
                   {!resendSuccess && !resendError && !isResending && (
-                    <Button
+                        <Button
                       variant="ghost"
-                      size="sm"
-                      onClick={handleResendVerification}
-                      disabled={isResending || isLoading}
+                          size="sm"
+                          onClick={handleResendVerification}
+                          disabled={isResending || isLoading}
                       className="h-6 px-2 text-xs text-amber-700 hover:bg-amber-100"
-                    >
-                      {isResending ? (
-                        <>
+                        >
+                          {isResending ? (
+                            <>
                           <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                           Отправка...
-                        </>
-                      ) : (
-                        <>
+                            </>
+                          ) : (
+                            <>
                           <RefreshCw className="w-3 h-3 mr-1" />
                           Отправить снова
-                        </>
-                      )}
-                    </Button>
+                            </>
+                          )}
+                        </Button>
                   )}
                 </div>
                 
@@ -121,21 +121,21 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
                     >
                       <AlertCircle className="h-3 w-3" />
                       <span>{resendError}</span>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
               </AlertDescription>
             </div>
             
             {/* Кнопка закрытия */}
-            <Button
-              variant="ghost"
-              size="sm"
+              <Button
+                variant="ghost"
+                size="sm"
               onClick={handleDismiss}
               className="h-6 w-6 p-0 text-amber-600 hover:bg-amber-100"
-            >
+              >
               <X className="h-3 w-3" />
-            </Button>
+              </Button>
           </div>
         </Alert>
       </motion.div>

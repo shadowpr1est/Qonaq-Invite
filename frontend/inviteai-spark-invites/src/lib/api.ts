@@ -180,65 +180,58 @@ class ApiClient {
     request: SiteGenerationRequest,
     onStatusUpdate: (status: GenerationStatus) => void
   ): Promise<GeneratedSite> {
-    const generationId = `gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Создаем WebSocket соединение для статусов
-    const wsUrl = this.baseURL.replace('http://', 'ws://').replace('https://', 'wss://');
-    const websocket = new WebSocket(`${wsUrl}/sites/generation-status/${generationId}`);
-    
-    return new Promise((resolve, reject) => {
-      let siteGeneration: Promise<GeneratedSite>;
-      
-      websocket.onopen = () => {
-        // Запускаем генерацию с передачей generation_id как query параметр
-        siteGeneration = this.request(`/sites/generate?generation_id=${generationId}`, {
-          method: 'POST',
-          body: JSON.stringify(request),
+    // Имитация реалистичного прогресса
+    const simulateProgress = async () => {
+      const steps = [
+        { progress: 5, message: 'Инициализация генерации...', delay: 500 },
+        { progress: 15, message: 'Анализ типа события...', delay: 800 },
+        { progress: 25, message: 'Подбор цветовой схемы...', delay: 1000 },
+        { progress: 40, message: 'Создание структуры сайта...', delay: 1200 },
+        { progress: 55, message: 'Генерация контента...', delay: 1500 },
+        { progress: 70, message: 'Применение дизайна...', delay: 1000 },
+        { progress: 85, message: 'Оптимизация для мобильных...', delay: 800 },
+        { progress: 95, message: 'Финальная обработка...', delay: 600 },
+      ];
+
+      for (const step of steps) {
+        await new Promise(resolve => setTimeout(resolve, step.delay));
+        onStatusUpdate({
+          step: step.message,
+          progress: step.progress,
+          message: step.message
         });
-        
-        siteGeneration.then(resolve).catch(reject);
-      };
-      
-      websocket.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          if (message.type === 'status_update') {
-            onStatusUpdate(message.data);
-          }
-        } catch (error) {
-          // Suppress WebSocket parsing errors in production
-          if (import.meta.env.DEV) {
-            console.error('Error parsing WebSocket message:', error);
-          }
         }
       };
       
-      websocket.onerror = (error) => {
-        if (import.meta.env.DEV) {
-          console.error('WebSocket error:', error);
-        }
-        // Если WebSocket не работает, используем обычную генерацию
-        if (!siteGeneration) {
-          siteGeneration = this.generateSite(request);
-          siteGeneration.then(resolve).catch(reject);
-        }
-      };
+    // Запускаем имитацию прогресса
+    const progressSimulation = simulateProgress();
+    
+    try {
+      // Запускаем реальную генерацию
+      const result = await this.generateSite(request);
       
-      websocket.onclose = () => {
-        // WebSocket закрыт, ничего не делаем если генерация уже завершена
-      };
+      // Дожидаемся завершения имитации прогресса
+      await progressSimulation;
       
-      // Таймаут для WebSocket соединения
-      setTimeout(() => {
-        if (websocket.readyState === WebSocket.CONNECTING) {
-          websocket.close();
-          if (!siteGeneration) {
-            siteGeneration = this.generateSite(request);
-            siteGeneration.then(resolve).catch(reject);
-          }
-        }
-      }, 5000);
-    });
+      // Финальное обновление
+      onStatusUpdate({
+        step: 'completed',
+        progress: 100,
+        message: 'Сайт готов!'
+      });
+
+      // Небольшая задержка перед возвратом результата
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return result;
+    } catch (error) {
+      onStatusUpdate({
+        step: 'error',
+        progress: 0,
+        message: 'Ошибка генерации'
+      });
+      throw error;
+    }
   }
 
   async getMySites(skip: number = 0, limit: number = 100): Promise<UserSitesResponse> {

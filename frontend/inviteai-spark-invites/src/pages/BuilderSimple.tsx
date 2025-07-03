@@ -33,6 +33,7 @@ import {
   Sparkles,
   Zap,
 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 // Упрощенная схема валидации
 const siteFormSchema = z.object({
@@ -271,45 +272,58 @@ const BuilderSimple = () => {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-gradient-to-br from-purple-50/95 to-blue-50/95 backdrop-blur-sm rounded-xl z-50 flex items-center justify-center"
+                  className="fixed inset-0 bg-gradient-to-br from-purple-50/95 to-blue-50/95 backdrop-blur-sm z-50 flex items-center justify-center"
                 >
-                  <div className="text-center space-y-6 p-8 w-full max-w-md mx-auto">
+                  <div className="text-center space-y-8 p-8 w-full max-w-md mx-auto">
+                    {/* Beautiful loading spinner */}
                     <div className="flex justify-center">
-                      <div className="relative w-24 h-24">
-                        <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl animate-pulse"></div>
-                        <div className="absolute inset-2 bg-white rounded-xl flex items-center justify-center">
-                          <Sparkles className="w-8 h-8 text-purple-500 animate-bounce" />
-                        </div>
-                      </div>
+                      <LoadingSpinner 
+                        size="xl" 
+                        variant="gradient"
+                        className="scale-125"
+                      />
                     </div>
                     
-                    <div className="space-y-3 text-center">
-                      <h3 className="text-2xl font-bold text-gray-800">
-                        Создаём ваш сайт
-                      </h3>
-                      <p className="text-gray-600 mx-auto">
-                        Наша ИИ генерирует уникальный дизайн специально для вашего события
+                    <div className="space-y-4 text-center">
+                      <motion.h3 
+                        className="text-3xl font-bold text-gray-800"
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        Создаём ваше приглашение
+                      </motion.h3>
+                      <p className="text-gray-600 text-lg">
+                        Подождите, мы создаём что-то особенное для вас...
                       </p>
                     </div>
                     
                     <div className="space-y-4 w-full">
-                      <div className="bg-white/80 rounded-full p-1 shadow-inner mx-auto">
+                      <div className="bg-white/90 rounded-2xl p-2 shadow-lg">
                         <div 
-                          className="h-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500 ease-out relative overflow-hidden"
+                          className="h-4 bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 rounded-xl transition-all duration-700 ease-out relative overflow-hidden"
                           style={{ width: `${generationProgress}%` }}
                         >
-                          <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
+                          <div className="absolute inset-0 bg-white/20 animate-pulse rounded-xl"></div>
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
                         </div>
                       </div>
                       <div className="text-center space-y-2">
-                        <p className="text-lg font-semibold text-purple-600">
+                        <motion.p 
+                          className="text-2xl font-bold text-purple-600"
+                          animate={{ scale: [1, 1.05, 1] }}
+                          transition={{ duration: 1, repeat: Infinity }}
+                        >
                           {Math.round(generationProgress)}%
-                        </p>
+                        </motion.p>
                         {generationStatus && (
-                          <p className="text-sm text-gray-600 animate-pulse">
+                          <motion.p 
+                            className="text-base text-gray-700 font-medium"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            key={generationStatus}
+                          >
                             {generationStatus}
-                          </p>
+                          </motion.p>
                         )}
                       </div>
                     </div>

@@ -184,7 +184,7 @@ const Signup = () => {
               </CardTitle>
             </CardHeader>
             
-            <CardContent className="px-4 sm:px-8 md:px-12 py-8">
+            <CardContent className="px-4 sm:px-8 md:px-12 py-8 w-full">
               <AnimatePresence mode="sync">
                 {error && (
                   <motion.div
@@ -210,7 +210,7 @@ const Signup = () => {
               </AnimatePresence>
 
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5 w-full">
                   <FormField
                     control={form.control}
                     name="name"
@@ -219,8 +219,9 @@ const Signup = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.4 }}
+                        className="w-full"
                       >
-                        <FormItem>
+                        <FormItem className="w-full">
                           <FormLabel className="text-base font-semibold text-gray-700 flex items-center gap-2">
                             <User className="w-4 h-4 text-purple-600" />
                             Полное имя
@@ -229,11 +230,12 @@ const Signup = () => {
                             <Input
                               type="text"
                               placeholder="Ваше полное имя"
-                              className="h-12 text-base pl-4 pr-4 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                              className="h-12 text-base pl-4 pr-4 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full"
                               {...field}
                             />
                           </FormControl>
-                          <FormMessage className="text-red-600 min-h-[20px] block" />                        </FormItem>
+                          <FormMessage className="text-red-600 min-h-[20px] max-h-[40px] block text-sm leading-tight overflow-hidden" />
+                        </FormItem>
                       </motion.div>
                     )}
                   />
@@ -246,8 +248,9 @@ const Signup = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.5 }}
+                        className="w-full"
                       >
-                        <FormItem>
+                        <FormItem className="w-full">
                           <FormLabel className="text-base font-semibold text-gray-700 flex items-center gap-2">
                             <Mail className="w-4 h-4 text-purple-600" />
                             Email адрес
@@ -256,11 +259,11 @@ const Signup = () => {
                             <Input
                               type="email"
                               placeholder="example@email.com"
-                              className="h-12 text-base pl-4 pr-4 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                              className="h-12 text-base pl-4 pr-4 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full"
                               {...field}
                             />
                           </FormControl>
-                          <FormMessage className="text-red-600 min-h-[20px] block" />
+                          <FormMessage className="text-red-600 min-h-[20px] max-h-[40px] block text-sm leading-tight overflow-hidden" />
                         </FormItem>
                       </motion.div>
                     )}
@@ -274,18 +277,19 @@ const Signup = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.6 }}
+                        className="w-full"
                       >
-                        <FormItem>
+                        <FormItem className="w-full">
                           <FormLabel className="text-base font-semibold text-gray-700 flex items-center gap-2">
                             <Lock className="w-4 h-4 text-purple-600" />
                             Пароль
                           </FormLabel>
                           <FormControl>
-                            <div className="relative">
+                            <div className="relative w-full">
                               <Input
                                 type={showPassword ? "text" : "password"}
                                 placeholder="••••••••"
-                                className="h-12 text-base pl-4 pr-12 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                                className="h-12 text-base pl-4 pr-12 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full"
                                 {...field}
                               />
                               <Button
@@ -303,7 +307,7 @@ const Signup = () => {
                               </Button>
                             </div>
                           </FormControl>
-                          <FormMessage className="text-red-600 min-h-[20px] block" />
+                          <FormMessage className="text-red-600 min-h-[20px] max-h-[40px] block text-sm leading-tight overflow-hidden" />
                         </FormItem>
                       </motion.div>
                     )}
@@ -317,18 +321,19 @@ const Signup = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.7 }}
+                        className="w-full"
                       >
-                        <FormItem>
+                        <FormItem className="w-full">
                           <FormLabel className="text-base font-semibold text-gray-700 flex items-center gap-2">
                             <Shield className="w-4 h-4 text-purple-600" />
                             Подтвердите пароль
                           </FormLabel>
                           <FormControl>
-                            <div className="relative">
+                            <div className="relative w-full">
                               <Input
                                 type={showConfirmPassword ? "text" : "password"}
                                 placeholder="••••••••"
-                                className="h-12 text-base pl-4 pr-12 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                                className="h-12 text-base pl-4 pr-12 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full"
                                 {...field}
                               />
                               <Button
@@ -346,7 +351,7 @@ const Signup = () => {
                               </Button>
                             </div>
                           </FormControl>
-                          <FormMessage className="text-red-600 min-h-[20px] block" />
+                          <FormMessage className="text-red-600 min-h-[20px] max-h-[40px] block text-sm leading-tight overflow-hidden" />
                         </FormItem>
                       </motion.div>
                     )}

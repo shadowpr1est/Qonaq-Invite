@@ -176,7 +176,7 @@ const Login = () => {
               </CardTitle>
             </CardHeader>
             
-            <CardContent className="px-4 sm:px-8 md:px-12 py-8">
+            <CardContent className="px-4 sm:px-8 md:px-12 py-8 w-full">
               <AnimatePresence mode="sync">
                 {error && (
                   <motion.div
@@ -202,7 +202,7 @@ const Login = () => {
               </AnimatePresence>
 
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5 w-full">
                   <FormField
                     control={form.control}
                     name="email"
@@ -227,7 +227,7 @@ const Login = () => {
                 />
               </div>
                           </FormControl>
-                          <FormMessage className="text-red-600" />
+                          <FormMessage className="text-red-600 min-h-[20px] max-h-[40px] block text-sm leading-tight overflow-hidden" />
                         </FormItem>
                       </motion.div>
                     )}
@@ -270,7 +270,7 @@ const Login = () => {
                               </Button>
                             </div>
                           </FormControl>
-                          <FormMessage className="text-red-600" />
+                          <FormMessage className="text-red-600 min-h-[20px] max-h-[40px] block text-sm leading-tight overflow-hidden" />
                         </FormItem>
                       </motion.div>
                     )}

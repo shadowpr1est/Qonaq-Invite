@@ -22,6 +22,7 @@ import {
   Home, Briefcase, GraduationCap, Baby, Eye, Sparkles, Zap, Monitor, 
   Smartphone, Clock, Music, Share, QrCode, User
 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 // Схема валидации для MVP
 const mvpFormSchema = z.object({
@@ -840,18 +841,28 @@ const BuilderMVP = () => {
                     animate={{ opacity: 1 }}
                     className="absolute inset-0 bg-white/95 flex items-center justify-center z-50 rounded-lg"
                   >
-                    <div className="text-center">
-                      <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                        <Sparkles className="w-8 h-8 text-white animate-bounce" />
+                    <div className="text-center space-y-6">
+                      <div className="flex justify-center">
+                        <LoadingSpinner 
+                          size="xl" 
+                          variant="gradient"
+                          className="scale-110"
+                        />
                       </div>
-                      <h3 className="text-xl font-bold mb-2">Создаём ваше приглашение...</h3>
-                      <div className="w-64 bg-gray-200 rounded-full h-2 mb-2">
+                      <motion.h3 
+                        className="text-xl font-bold text-gray-800"
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        Создаём ваше приглашение...
+                      </motion.h3>
+                      <div className="w-64 bg-gray-200 rounded-full h-2 mb-2 mx-auto">
                         <div 
                           className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-500"
                           style={{ width: `${generationProgress}%` }}
                         />
                       </div>
-                      <p className="text-gray-600">{generationProgress}%</p>
+                      <p className="text-gray-600 text-lg font-medium">{generationProgress}%</p>
                     </div>
                   </motion.div>
                 )}
