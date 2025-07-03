@@ -102,11 +102,18 @@ class SiteGeneratorService:
                 # Extract structured data from GPT response
                 result = self._parse_gpt_response_to_structure(content, request)
                 
-                # Add user preferences to the result
+                # Add user preferences and content to the result
                 result.event_type = request.event_type
                 result.color_preferences = request.color_preferences
                 result.style_preferences = request.style_preferences
                 result.theme = request.theme
+                result.content_details = request.content_details
+                
+                # Override title and description with user data if provided
+                if request.content_details.get('event_title'):
+                    result.title = request.content_details['event_title']
+                if request.content_details.get('description'):
+                    result.meta_description = request.content_details['description']
                 
                 logger.info(f"🎉 SUCCESS: Generated site '{result.title}' with {result.event_type} theme")
                 return result
@@ -478,24 +485,35 @@ Generate a complete, production-ready React component that embodies the {site_da
     async def generate_html_preview(self, site_data: GeneratedReactSite) -> str:
         """Generate HTML preview with smart color detection and user-selected styles"""
         try:
-            # Extract user data
+            # Extract user data from site_data.content_details (user form input)
             content_details = getattr(site_data, 'content_details', {}) or {}
             color_preferences = getattr(site_data, 'color_preferences', '') or ''
             theme = getattr(site_data, 'theme', '') or ''
             event_type = getattr(site_data, 'event_type', 'birthday')
             
-            # Extract real user content - FIXED field mapping
-            event_title = content_details.get('event_title', site_data.title)
-            event_date = content_details.get('event_date', 'Дата уточняется')
-            event_time = content_details.get('event_time', 'Время уточняется')
-            event_location = content_details.get('venue_name', 'Место уточняется')
+            # Extract real user content - USE FORM DATA FIRST, then fallback to site_data
+            event_title = content_details.get('event_title') or site_data.title or 'Ваше событие'
+            event_date = content_details.get('event_date') or 'Дата уточняется'
+            event_time = content_details.get('event_time') or 'Время уточняется'  
+            event_location = content_details.get('venue_name') or 'Место уточняется'
             venue_address = content_details.get('venue_address', '')
-            event_description = content_details.get('description', 'Добро пожаловать на наше событие!')
-            organizer_name = content_details.get('contact_name', 'Организатор')
-            organizer_phone = content_details.get('contact_phone', '+7 (999) 000-00-00')
-            organizer_email = content_details.get('contact_email', 'contact@event.com')
+            event_description = content_details.get('description') or 'Добро пожаловать на наше событие!'
+            organizer_name = content_details.get('contact_name') or 'Организатор'
+            organizer_phone = content_details.get('contact_phone') or '+7 (999) 000-00-00'
+            organizer_email = content_details.get('contact_email') or 'contact@event.com'
             template_id = content_details.get('template_id', '')
             decorative_elements = content_details.get('decorative_elements', '')
+            
+            # Log user data extraction for debugging
+            logger.info(f"🎯 USER DATA EXTRACTED:")
+            logger.info(f"  Event Title: {event_title}")
+            logger.info(f"  Event Date: {event_date}")
+            logger.info(f"  Event Time: {event_time}")
+            logger.info(f"  Venue: {event_location}")
+            logger.info(f"  Description: {event_description[:50]}...")
+            logger.info(f"  Contact: {organizer_name}")
+            logger.info(f"  Color Prefs: {color_preferences}")
+            logger.info(f"  Theme: {theme}")
             
             # Smart color scheme detection based on user preferences
             def get_smart_color_scheme(color_preferences: str, theme: str, event_type: str) -> str:
@@ -1357,8 +1375,11 @@ COLOR PREFERENCES: {request.color_preferences or 'согласно типу со
 
     def _create_react_fallback_structure(self, request: SiteGenerationRequest) -> GeneratedReactSite:
         """Create React fallback structure when API fails"""
-        event_title = request.content_details.get('event_title', 'Ваше событие')
-        description = request.content_details.get('description', 'Добро пожаловать на наше событие!')
+        event_title = request.content_details.get('event_title') or 'Ваше событие'
+        description = request.content_details.get('description') or 'Добро пожаловать на наше событие!'
+        
+        # Log fallback data usage
+        logger.info(f"🔄 FALLBACK: Using user data - Title: {event_title}, Description: {description[:50]}...")
         
         component_names = {
             'wedding': 'WeddingLanding',
