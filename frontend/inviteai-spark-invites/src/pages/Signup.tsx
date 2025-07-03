@@ -233,8 +233,7 @@ const Signup = () => {
                               {...field}
                             />
                           </FormControl>
-                          <FormMessage className="text-red-600" />
-                        </FormItem>
+                          <FormMessage className="text-red-600 min-h-[20px] block" />                        </FormItem>
                       </motion.div>
                     )}
                   />
@@ -261,7 +260,7 @@ const Signup = () => {
                               {...field}
                             />
                           </FormControl>
-                          <FormMessage className="text-red-600" />
+                          <FormMessage className="text-red-600 min-h-[20px] block" />
                         </FormItem>
                       </motion.div>
                     )}
@@ -304,7 +303,7 @@ const Signup = () => {
                               </Button>
                             </div>
                           </FormControl>
-                          <FormMessage className="text-red-600" />
+                          <FormMessage className="text-red-600 min-h-[20px] block" />
                         </FormItem>
                       </motion.div>
                     )}
@@ -347,7 +346,7 @@ const Signup = () => {
                               </Button>
                             </div>
                           </FormControl>
-                          <FormMessage className="text-red-600" />
+                          <FormMessage className="text-red-600 min-h-[20px] block" />
                         </FormItem>
                       </motion.div>
                     )}

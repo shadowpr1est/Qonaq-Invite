@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useNavigate } from 'react-router-dom';
@@ -23,10 +23,29 @@ export const GoogleOAuthButton: React.FC<GoogleOAuthButtonProps> = ({
 }) => {
   const { googleOAuth, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [googleReady, setGoogleReady] = useState(false);
+
+  // Проверяем, когда библиотека Google загрузится
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (window.google && window.google.accounts) {
+      setGoogleReady(true);
+      return;
+    }
+
+    const checkInterval = setInterval(() => {
+      if (window.google && window.google.accounts) {
+        setGoogleReady(true);
+        clearInterval(checkInterval);
+      }
+    }, 100);
+
+    return () => clearInterval(checkInterval);
+  }, []);
 
   const handleGoogleAuth = () => {
-    // Проверяем, загружена ли библиотека Google
-    if (typeof window.google === 'undefined') {
+    if (!googleReady || typeof window.google === 'undefined') {
       console.error('Google библиотека не загружена');
       return;
     }
@@ -66,19 +85,12 @@ export const GoogleOAuthButton: React.FC<GoogleOAuthButtonProps> = ({
 
   return (
     <>
-      {/* Загружаем Google Identity Services */}
-      <script 
-        src="https://accounts.google.com/gsi/client" 
-        async 
-        defer
-      />
-      
       <Button
         type="button"
         variant="outline"
         className={`w-full h-12 text-base font-medium border-2 border-gray-200 hover:border-gray-300 transition-all duration-200 ${className}`}
         onClick={handleGoogleAuth}
-        disabled={disabled || isLoading}
+        disabled={disabled || isLoading || !googleReady}
       >
         <div className="flex items-center gap-3">
           {/* Google logo */}
