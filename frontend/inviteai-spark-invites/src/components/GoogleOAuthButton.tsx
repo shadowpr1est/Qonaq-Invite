@@ -77,13 +77,6 @@ export const GoogleOAuthButton: React.FC<GoogleOAuthButtonProps> = ({
             variant: 'destructive',
           });
         }
-        if (notification.isSkippedMoment()) {
-          toast({
-            title: 'Google One Tap пропущен',
-            description: 'Пользователь пропустил окно авторизации.',
-            variant: 'destructive',
-          });
-        }
         if (notification.isDismissedMoment()) {
           toast({
             title: 'Google One Tap закрыт',
