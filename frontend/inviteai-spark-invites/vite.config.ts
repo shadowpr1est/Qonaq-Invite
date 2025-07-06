@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 import { config } from 'dotenv';
 import { resolve } from 'path';
 
-config({ path: resolve(__dirname, '../../.env') });
+config({ path: resolve(__dirname, './.env') });
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
