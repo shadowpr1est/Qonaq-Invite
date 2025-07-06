@@ -69,12 +69,52 @@ export const GoogleOAuthButton: React.FC<GoogleOAuthButtonProps> = ({
       return;
     }
     try {
-      window.google.accounts.id.prompt();
-    } catch (e) {
+      window.google.accounts.id.prompt((notification: any) => {
+        if (notification.isNotDisplayed()) {
+          toast({
+            title: 'Google One Tap не отображается',
+            description: 'Возможно, вы уже авторизованы, заблокированы cookies или есть ограничения браузера.',
+            variant: 'destructive',
+          });
+        }
+        if (notification.isSkippedMoment()) {
+          toast({
+            title: 'Google One Tap пропущен',
+            description: 'Пользователь пропустил окно авторизации.',
+            variant: 'destructive',
+          });
+        }
+        if (notification.isDismissedMoment()) {
+          toast({
+            title: 'Google One Tap закрыт',
+            description: 'Вы закрыли окно авторизации Google.',
+            variant: 'destructive',
+          });
+        }
+        // FedCM errors
+        if (notification.getNotDisplayedReason && notification.getNotDisplayedReason() === 'credential_returned') {
+          // credential_returned — штатная ситуация, не ошибка
+          return;
+        }
+        if (notification.getNotDisplayedReason && notification.getNotDisplayedReason() === 'unknown_reason') {
+          toast({
+            title: 'Ошибка Google OAuth',
+            description: 'Неизвестная ошибка при отображении окна авторизации.',
+            variant: 'destructive',
+          });
+        }
+      });
+    } catch (e: any) {
       setError('Ошибка инициализации Google OAuth');
+      let description = 'Не удалось открыть окно авторизации Google.';
+      if (e && e.name === 'NetworkError') {
+        description = 'Ошибка сети при получении токена Google. Проверьте соединение или настройки OAuth.';
+      } else if (e && e.name === 'AbortError') {
+        description = 'Запрос авторизации был прерван. Попробуйте ещё раз.';
+      }
       toast({
         title: 'Ошибка Google OAuth',
-        description: 'Не удалось открыть окно авторизации Google.',
+        description,
         variant: 'destructive',
       });
     }
