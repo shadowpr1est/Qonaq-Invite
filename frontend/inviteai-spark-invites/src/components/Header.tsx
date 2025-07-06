@@ -115,9 +115,9 @@ const Header = () => {
               className={`text-xl font-bold font-display transition-colors ${
                 isScrolled ? 'text-white' : 'text-foreground'
               }`}
-              aria-label="Qonaq Invite - главная страница"
+              aria-label="Invitly AI - главная страница"
             >
-              Qonaq Invite
+              InvitlyAI
             </a>
           </motion.div>
 
@@ -278,7 +278,7 @@ const Header = () => {
                     key={link.label}
                     href={link.href}
                     onClick={(e) => handleNavClick(link, e)}
-                    className={`block font-semibold transition-colors cursor-pointer text-brand-700 hover:text-brand-600 ${location.hash === link.href ? 'text-gradient' : ''}`}
+                    className={`block font-semibold transition-colors cursor-pointer ${isScrolled ? 'text-white hover:text-white' : 'text-brand-600 hover:text-brand-700'} ${!isScrolled && location.hash === link.href ? 'text-gradient' : ''}`}
                   >
                     {link.label}
                   </a>
@@ -376,7 +376,7 @@ const Header = () => {
                       </Button>
                       <Button 
                         variant="ghost"
-                        className="w-full justify-start font-semibold text-red-600 hover:bg-red-50 hover:text-red-700"
+                        className="w-full justify-start font-semibold text-red-300 hover:bg-red-500/20 hover:text-white"
                         onClick={() => {
                           setIsMobileMenuOpen(false);
                           handleLogout();
@@ -390,7 +390,7 @@ const Header = () => {
                     <>
                       <Button 
                         variant="ghost"
-                        className={`w-full font-semibold border border-brand-100 bg-white/80 text-brand-700 hover:text-brand-600 hover:bg-brand-50 transition-all`}
+                        className={`w-full font-semibold transition-all ${isScrolled ? 'bg-white/10 text-white hover:bg-white/20 border border-white/20' : 'border border-brand-100 bg-white/80 text-brand-700 hover:text-brand-600 hover:bg-brand-50'}`}
                         onClick={() => {
                           setIsMobileMenuOpen(false);
                           window.location.href = '/login';

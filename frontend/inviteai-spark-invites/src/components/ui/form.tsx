@@ -143,7 +143,7 @@ FormDescription.displayName = "FormDescription"
 const FormMessage = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
->(({ className, children, ...props }, ref) => {
+>(({ className, children, style, ...props }, ref) => {
   const { error, formMessageId } = useFormField()
   const body = error ? String(error?.message) : children
 
@@ -151,11 +151,22 @@ const FormMessage = React.forwardRef<
     return null
   }
 
+  // 100% width on small screens, but do not exceed 400 px on larger ones.
+  const fixedWidthStyle: React.CSSProperties = {
+    width: "100%",
+    maxWidth: "400px",
+    ...style,
+  }
+
   return (
     <p
       ref={ref}
       id={formMessageId}
-      className={cn("text-sm font-medium text-destructive", className)}
+      style={fixedWidthStyle}
+      className={cn(
+        "text-sm font-medium text-destructive block overflow-hidden break-words whitespace-normal min-h-[24px] max-h-[30px]",
+        className
+      )}
       {...props}
     >
       {body}

@@ -169,7 +169,7 @@ const Signup = () => {
           }}
           className="relative z-10"
         >
-          <Card className="w-full max-w-[640px] shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+          <Card className="w-full max-w-[460px] shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="text-center px-4 sm:px-8 md:px-12 py-8 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-t-lg">
               <motion.div
                 initial={{ scale: 0 }}
@@ -195,13 +195,13 @@ const Signup = () => {
                   >
                     <Alert variant="destructive" className="border-red-200 bg-red-50">
                       <AlertCircle className="h-4 w-4" />
-                      <AlertDescription className="text-red-800">{error}</AlertDescription>
+                      <AlertDescription className="text-red-800 min-h-[20px] md:min-h-[24px] max-h-[40px] block w-full text-left">{error}</AlertDescription>
                     </Alert>
                     {errorSuggestion && (
                       <Alert className="border-blue-200 bg-blue-50">
                         <AlertDescription className="text-blue-800 flex items-start gap-2">
                           <span className="text-blue-600 font-medium">💡</span>
-                          {errorSuggestion}
+                          <span className="min-h-[20px] md:min-h-[24px] max-h-[40px] block w-full text-left">{errorSuggestion}</span>
                         </AlertDescription>
                       </Alert>
                     )}
@@ -234,7 +234,7 @@ const Signup = () => {
                               {...field}
                             />
                           </FormControl>
-                          <FormMessage className="text-red-600 min-h-[20px] max-h-[40px] block text-sm leading-tight overflow-hidden" />
+                          <FormMessage id="name-error" className="text-red-600 min-h-[24px] max-h-[40px] block w-full text-left overflow-hidden break-words whitespace-normal" role="alert" />
                         </FormItem>
                       </motion.div>
                     )}
@@ -259,11 +259,11 @@ const Signup = () => {
                             <Input
                               type="email"
                               placeholder="example@email.com"
-                              className="h-12 text-base pl-4 pr-4 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full"
+                              className="h-12 text-base pl-4 pr-4 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full max-w-[480px] mx-auto"
                               {...field}
                             />
                           </FormControl>
-                          <FormMessage className="text-red-600 min-h-[20px] max-h-[40px] block text-sm leading-tight overflow-hidden" />
+                          <FormMessage id="email-error" className="text-red-600 min-h-[24px] max-h-[40px] block w-full text-left overflow-hidden break-words whitespace-normal" role="alert" />
                         </FormItem>
                       </motion.div>
                     )}
@@ -289,7 +289,7 @@ const Signup = () => {
                               <Input
                                 type={showPassword ? "text" : "password"}
                                 placeholder="••••••••"
-                                className="h-12 text-base pl-4 pr-12 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full"
+                                className="h-12 text-base pl-4 pr-12 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full max-w-[480px] mx-auto"
                                 {...field}
                               />
                               <Button
@@ -307,7 +307,7 @@ const Signup = () => {
                               </Button>
                             </div>
                           </FormControl>
-                          <FormMessage className="text-red-600 min-h-[20px] max-h-[40px] block text-sm leading-tight overflow-hidden" />
+                          <FormMessage id="password-error" className="text-red-600 min-h-[24px] max-h-[40px] block w-full text-left overflow-hidden break-words whitespace-normal" role="alert" />
                         </FormItem>
                       </motion.div>
                     )}
@@ -333,7 +333,7 @@ const Signup = () => {
                               <Input
                                 type={showConfirmPassword ? "text" : "password"}
                                 placeholder="••••••••"
-                                className="h-12 text-base pl-4 pr-12 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full"
+                                className="h-12 text-base pl-4 pr-12 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full max-w-[480px] mx-auto"
                                 {...field}
                               />
                               <Button
@@ -351,7 +351,7 @@ const Signup = () => {
                               </Button>
                             </div>
                           </FormControl>
-                          <FormMessage className="text-red-600 min-h-[20px] max-h-[40px] block text-sm leading-tight overflow-hidden" />
+                          <FormMessage id="confirmPassword-error" className="text-red-600 min-h-[24px] max-h-[40px] block w-full text-left overflow-hidden break-words whitespace-normal" role="alert" />
                         </FormItem>
                       </motion.div>
                     )}

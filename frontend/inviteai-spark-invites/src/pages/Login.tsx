@@ -161,7 +161,7 @@ const Login = () => {
           }}
           className="relative z-10"
         >
-          <Card className="w-full max-w-[640px] shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+          <Card className="w-full max-w-[460px] shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="text-center px-4 sm:px-8 md:px-12 py-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
               <motion.div
                 initial={{ scale: 0 }}

@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     ]
     
     # Production domain support
-    PRODUCTION_DOMAIN: str = Field(default="", env="PRODUCTION_DOMAIN")
+    PRODUCTION_DOMAIN: str = Field(default="invitlyy.live", env="PRODUCTION_DOMAIN")
     
     @property
     def effective_allowed_origins(self) -> list[str]:
@@ -84,6 +84,11 @@ class Settings(BaseSettings):
     SMTP_EMAIL: str | None = Field(default=None, env="SMTP_EMAIL")
     SMTP_PASSWORD: str | None = Field(default=None, env="SMTP_PASSWORD")
     SMTP_FROM_NAME: str = Field(default="Invitly", env="SMTP_FROM_NAME")
+    
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = Field(env="GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET: str = Field(env="GOOGLE_CLIENT_SECRET")
+    GOOGLE_REDIRECT_URI: str = Field(env="GOOGLE_REDIRECT_URI")
     
     @property
     def private_key(self) -> str:
