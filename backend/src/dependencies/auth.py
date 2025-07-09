@@ -1,33 +1,23 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
-import uuid
-
-from src.core.security import verify_token
-from src.db.db import get_db
-from src.users.service import UserService
+from fastapi import Depends, HTTPException, status, Request
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from src.users.models import User
+from src.db.db import get_db
+from src.core.security import verify_token
+import logging
 
-# OAuth2 Bearer scheme for JWT tokens
-security = HTTPBearer()
+logger = logging.getLogger(__name__)
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
 ) -> User:
     """
-    Get current authenticated user from JWT token
-    
-    Args:
-        credentials: HTTP Bearer credentials containing JWT token
-        db: Database session
-        
-    Returns:
-        Current authenticated user
-        
-    Raises:
-        HTTPException: If token is invalid or user not found
+    Get current authenticated user from JWT token.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -36,88 +26,79 @@ async def get_current_user(
     )
     
     try:
-        # Extract token from credentials
-        token = credentials.credentials
-        
         # Verify and decode JWT token
         payload = verify_token(token)
         if payload is None:
+            logger.warning("Invalid token provided")
             raise credentials_exception
             
-        # Extract user ID from token subject
-        user_id: str = payload.get("sub")
+        user_id = payload.get("sub")
         if user_id is None:
+            logger.warning("Token missing user ID (sub)")
             raise credentials_exception
             
-        # Check token type
-        token_type = payload.get("type")
-        if token_type != "access":
-            raise credentials_exception
-            
-    except Exception:
-        raise credentials_exception
-    
-    # Get user from database
-    user_service = UserService(db)
-    user = await user_service.get_by_id(uuid.UUID(user_id))
-    if user is None:
-        raise credentials_exception
+        # Query user from database
+        stmt = select(User).where(User.id == int(user_id))
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
         
-    return user
+        if user is None:
+            logger.warning(f"User not found for ID: {user_id}")
+            raise credentials_exception
+            
+        return user
+        
+    except ValueError:
+        logger.warning("Invalid user ID format in token")
+        raise credentials_exception
+    except Exception as e:
+        logger.error(f"Authentication error: {str(e)}")
+        raise credentials_exception
 
 async def get_current_active_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
     """
-    Get current active user (non-disabled)
-    
-    Args:
-        current_user: Current authenticated user
-        
-    Returns:
-        Current active user
-        
-    Raises:
-        HTTPException: If user is disabled
+    Get current authenticated and active user.
     """
-    if hasattr(current_user, 'is_active') and not current_user.is_active:
+    if not current_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Inactive user"
         )
     return current_user
 
-def get_optional_current_user():
+async def get_user_from_request(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+) -> Optional[User]:
     """
-    Optional authentication dependency that doesn't raise errors
-    Returns None if no valid token is provided
+    Extract user from Authorization header (optional authentication).
+    Returns None if no valid token is provided.
     """
-    async def _get_optional_user(
-        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-        db: AsyncSession = Depends(get_db)
-    ) -> Optional[User]:
-        if not credentials:
+    try:
+        authorization = request.headers.get("Authorization")
+        if not authorization or not authorization.startswith("Bearer "):
             return None
             
-        try:
-            token = credentials.credentials
-            payload = verify_token(token)
-            if payload is None:
-                return None
-                
-            user_id = payload.get("sub")
-            if user_id is None:
-                return None
-                
-            token_type = payload.get("type")
-            if token_type != "access":
-                return None
-                
-            user_service = UserService(db)
-            user = await user_service.get_by_id(uuid.UUID(user_id))
-            return user
-            
-        except Exception:
-            return None
-    
-    return _get_optional_user 
+        token = authorization.split(" ", 1)[1]
+        return await get_current_user(token=token, db=db)
+        
+    except HTTPException:
+        return None
+    except Exception as e:
+        logger.error(f"Optional auth error: {str(e)}")
+        return None
+
+async def require_admin_user(
+    current_user: User = Depends(get_current_active_user)
+) -> User:
+    """
+    Require authenticated user with admin role.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
