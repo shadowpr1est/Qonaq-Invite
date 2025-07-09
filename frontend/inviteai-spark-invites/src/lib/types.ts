@@ -5,7 +5,7 @@ export interface User {
   name: string;
   avatar?: string;
   bio?: string;
-  is_email_verified?: boolean;
+  is_email_verified: boolean;
 }
 
 export interface UserProfile extends User {
@@ -66,6 +66,27 @@ export interface EmailVerificationRequest {
 
 export interface EmailVerificationConfirm {
   token: string;
+}
+
+// Email Verification with 6-digit Code (New)
+export interface EmailVerificationCodeRequest {
+  email: string;
+}
+
+export interface EmailVerificationCodeConfirm {
+  email: string;
+  code: string;
+}
+
+// Password Reset Types (Legacy)
+export interface PasswordResetCodeRequest {
+  email: string;
+}
+
+export interface PasswordResetCodeConfirm {
+  email: string;
+  code: string;
+  new_password: string;
 }
 
 // API Types
@@ -265,6 +286,14 @@ export interface SiteGenerationStep {
   title: string;
   description: string;
   completed: boolean;
+}
+
+// Real-time generation status for WebSocket updates
+export interface GenerationStatus {
+  step: string;
+  progress: number;
+  message: string;
+  estimated_time?: number;
 }
 
 // Form data for site generation

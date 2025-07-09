@@ -4,18 +4,29 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
-class UserCreate(BaseModel):
-    """Schema for user registration - matches frontend"""
-    name: str = Field(..., min_length=2, max_length=100, description="Full name")
-    email: EmailStr = Field(..., description="User email address")
+class UserBase(BaseModel):
+    """Base user schema"""
+    email: EmailStr
+    name: str
+
+
+class UserCreate(UserBase):
+    """Schema for user creation"""
     password: str = Field(..., min_length=8, description="User password")
 
 
 class UserLogin(BaseModel):
-    """Schema for user login - matches frontend LoginCredentials"""
-    email: EmailStr = Field(..., description="User email address")
+    """Schema for user login"""
+    email: EmailStr = Field(..., description="User email")
     password: str = Field(..., description="User password")
-    remember: Optional[bool] = Field(default=False, description="Remember me option")
+
+
+class UserResponse(UserBase):
+    """Schema for user response"""
+    id: str
+    avatar: Optional[str] = None
+    bio: Optional[str] = None
+    is_email_verified: bool
 
 
 class GoogleOAuthCreate(BaseModel):
@@ -32,111 +43,101 @@ class EmailVerificationRequest(BaseModel):
 
 
 class EmailVerificationConfirm(BaseModel):
-    """Schema for email verification confirmation"""
+    """Schema for email verification confirmation with token"""
     token: str = Field(..., description="Email verification token")
 
 
-class User(BaseModel):
-    """Base User schema - matches frontend User interface exactly"""
-    id: str
-    email: str
-    name: str
-    avatar: Optional[str] = None
-    bio: Optional[str] = None
-    is_email_verified: Optional[bool] = None
-
-    class Config:
-        from_attributes = True
+class EmailVerificationCodeRequest(BaseModel):
+    """Schema for requesting 6-digit email verification code"""
+    email: EmailStr = Field(..., description="User email to send code to")
 
 
-class UserResponse(User):
-    """User response schema with all safe fields"""
-    pass
+class EmailVerificationCodeConfirm(BaseModel):
+    """Schema for confirming 6-digit email verification code"""
+    email: EmailStr = Field(..., description="User email")
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit verification code")
 
 
-class UserProfile(UserResponse):
-    """Complete user profile with stats"""
-    stats: "UserStats"
-    settings: "UserSettings"
+class PasswordResetCodeRequest(BaseModel):
+    """Schema for requesting 6-digit password reset code"""
+    email: EmailStr = Field(..., description="User email to send reset code to")
 
 
-class UserPreferences(BaseModel):
-    """User preferences - matches frontend UserPreferences"""
-    theme: str = Field(default="system", pattern="^(light|dark|system)$")
-    language: str = Field(default="en", pattern="^(ru|en)$")
-    notifications: "NotificationSettings"
-
-
-class NotificationSettings(BaseModel):
-    """Notification settings"""
-    email: bool = True
-    push: bool = True
-
-
-class UserSettings(BaseModel):
-    """User settings schema"""
-    notifications: NotificationSettings = NotificationSettings()
-    theme: str = Field(default="light", pattern="^(light|dark)$")
-    language: str = Field(default="ru", pattern="^(en|ru)$")
-
-
-class UserUpdate(BaseModel):
-    """Schema for updating user profile"""
-    name: Optional[str] = Field(None, min_length=2, max_length=100, description="Full name")
-    bio: Optional[str] = Field(None, max_length=500, description="User bio")
-    avatar: Optional[str] = Field(None, description="Avatar URL")
-
-
-class ChangePasswordRequest(BaseModel):
-    """Schema for password change request"""
-    currentPassword: str = Field(..., min_length=6, description="Current password")
-    newPassword: str = Field(..., min_length=8, description="New password")
+class PasswordResetCodeConfirm(BaseModel):
+    """Schema for confirming password reset with 6-digit code"""
+    email: EmailStr = Field(..., description="User email")
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit reset code")
+    new_password: str = Field(..., min_length=8, description="New password")
 
 
 class AuthResponse(BaseModel):
-    """Authentication response - matches frontend expectations"""
+    """Schema for authentication response"""
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
     user: UserResponse
 
 
-class Token(BaseModel):
-    """JWT token response schema"""
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
+class TokenRefreshRequest(BaseModel):
+    """Schema for token refresh request"""
+    refresh_token: str = Field(..., description="Refresh token")
+
+
+class UserUpdate(BaseModel):
+    """Schema for updating user profile"""
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    bio: Optional[str] = Field(None, max_length=500)
+    avatar: Optional[str] = Field(None, max_length=500)
+
+
+class ChangePasswordRequest(BaseModel):
+    """Schema for changing password"""
+    currentPassword: str = Field(..., description="Current password")
+    newPassword: str = Field(..., min_length=8, description="New password")
 
 
 class ApiResponse(BaseModel):
-    """Generic API response"""
-    data: dict = {}
-    message: str = ""
-    success: bool = True
+    """Generic API response schema"""
+    data: dict = Field(default_factory=dict)
+    message: str = Field(default="Success")
+    success: bool = Field(default=True)
 
 
 class UserStats(BaseModel):
     """User statistics schema"""
-    total_sites: int = 0
-    total_views: int = 0
-    total_interactions: int = 0
-    most_popular_theme: Optional[str] = None
+    total_analyses: int
+    completed_analyses: int
+    average_score: Optional[float] = None
+    total_practice_time: int
+    current_streak: int
+    best_streak: int
+    improvement_rate: Optional[float] = None
+    join_date: str
 
 
-class TokenData(BaseModel):
-    """Token payload data"""
-    user_id: Optional[str] = None
-    exp: Optional[int] = None
-    iat: Optional[int] = None
-    jti: Optional[str] = None
+class UserRead(BaseModel):
+    """Schema for reading user data"""
+    id: str
+    email: str
+    name: str
+    avatar: Optional[str] = None
+    bio: Optional[str] = None
+    is_active: bool
+    is_email_verified: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
+# Legacy schemas for backward compatibility
 class ForgotPasswordRequest(BaseModel):
-    """Schema for forgot password request"""
+    """Schema for forgot password request (legacy)"""
     email: EmailStr = Field(..., description="User email address")
 
 
 class ResetPasswordRequest(BaseModel):
-    """Schema for password reset request"""
+    """Schema for password reset request (legacy)"""
     token: str = Field(..., description="Reset token")
     new_password: str = Field(..., min_length=8, description="New password") 

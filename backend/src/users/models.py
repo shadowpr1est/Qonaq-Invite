@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, Text
+from sqlalchemy import Column, String, Boolean, DateTime, Text, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from src.db.db import Base
@@ -41,6 +41,11 @@ class User(Base):
         default=True, 
         nullable=False
     )
+    is_admin = Column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
     # Email verification fields
     is_email_verified = Column(
         Boolean,
@@ -49,6 +54,24 @@ class User(Base):
     )
     email_verification_token = Column(
         String(255),
+        nullable=True
+    )
+    # 6-digit email verification code
+    email_verification_code = Column(
+        String(6),
+        nullable=True
+    )
+    email_verification_code_expires_at = Column(
+        DateTime,
+        nullable=True
+    )
+    # Password reset fields
+    password_reset_code = Column(
+        String(6),
+        nullable=True
+    )
+    password_reset_code_expires_at = Column(
+        DateTime,
         nullable=True
     )
     # OAuth fields

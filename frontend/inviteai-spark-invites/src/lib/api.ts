@@ -7,6 +7,10 @@ import type {
   ResetPasswordRequest,
   GoogleOAuthRequest,
   AuthResponse,
+  EmailVerificationCodeRequest,
+  EmailVerificationCodeConfirm,
+  PasswordResetCodeRequest,
+  PasswordResetCodeConfirm,
   SiteGenerationRequest,
   GeneratedSite,
   UserSitesResponse,
@@ -24,15 +28,17 @@ export interface ApiError {
 
 export interface ApiResponse<T = any> {
   data?: T;
-  error?: ApiError;
+  message?: string;
+  success?: boolean;
+  error?: string | ApiError;
 }
 
 class ApiClient {
   private baseURL: string;
-  private authToken: string | null = null;
+  public authToken: string | null = null;
 
-  constructor(baseURL: string) {
-    this.baseURL = baseURL;
+  constructor() {
+    this.baseURL = API_BASE_URL;
     this.loadToken();
   }
 
@@ -42,30 +48,34 @@ class ApiClient {
     }
   }
 
-  public setToken(token: string | null) {
+  setToken(token: string) {
     this.authToken = token;
     if (typeof window !== 'undefined') {
-      if (token) {
-        localStorage.setItem('access_token', token);
-      } else {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-      }
+      localStorage.setItem('access_token', token);
+    }
+  }
+
+  removeToken() {
+    this.authToken = null;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
     }
   }
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    requireAuth: boolean = true
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
-    const headers: Record<string, string> = {
+    const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      ...options.headers as Record<string, string>,
+      ...options.headers,
     };
 
-    if (this.authToken) {
+    if (requireAuth && this.authToken) {
       headers.Authorization = `Bearer ${this.authToken}`;
     }
 
@@ -78,56 +88,58 @@ class ApiClient {
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        let errorMessage = 'Произошла ошибка';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.detail || errorData.message || errorMessage;
-        } catch {
-          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
+        const errorData = await response.json().catch(() => ({
+          detail: `HTTP ${response.status}: ${response.statusText}`
+        }));
+        
+        throw {
+          status: response.status,
+          message: errorData.detail || errorData.message || 'Network error',
+          data: errorData
+        };
       }
 
-      return response.json();
-    } catch (error) {
-      if (error instanceof Error) {
+      const data = await response.json();
+      return data;
+    } catch (error: any) {
+      if (error.status) {
         throw error;
       }
-      throw new Error('Неизвестная ошибка сети');
+      throw {
+        status: 0,
+        message: 'Network error or server unavailable',
+        data: null
+      };
     }
   }
 
-  // Authentication endpoints
-  async login(credentials: LoginRequest): Promise<{ access_token: string; refresh_token: string; user: User }> {
+  // Authentication Methods
+  async login(credentials: LoginRequest): Promise<AuthResponse> {
     return this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
-    });
+    }, false);
   }
 
-  async signup(data: SignupRequest): Promise<{ access_token: string; refresh_token: string; user: User }> {
+  async signup(data: SignupRequest): Promise<AuthResponse> {
     return this.request('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
-    });
+    }, false);
   }
 
   async forgotPassword(data: ForgotPasswordRequest): Promise<{ message: string }> {
     return this.request('/auth/forgot-password', {
       method: 'POST',
       body: JSON.stringify(data),
-    });
+    }, false);
   }
 
   async resetPassword(data: ResetPasswordRequest): Promise<{ message: string }> {
     return this.request('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify(data),
-    });
-  }
-
-  async getCurrentUser(): Promise<User> {
-    return this.request('/auth/profile');
+    }, false);
   }
 
   // Google OAuth
@@ -135,117 +147,124 @@ class ApiClient {
     return this.request('/auth/google-oauth', {
       method: 'POST',
       body: JSON.stringify(data),
-    });
+    }, false);
   }
 
-  // Email Verification
+  // Email Verification (Legacy)
   async verifyEmail(token: string): Promise<{ message: string; success: boolean }> {
     return this.request('/auth/verify-email', {
       method: 'POST',
       body: JSON.stringify({ token }),
-    });
+    }, false);
   }
 
-  async resendVerificationEmail(email: string): Promise<{ message: string; success: boolean }> {
+  async resendVerificationEmail(email: string): Promise<{ message: string }> {
     return this.request('/auth/resend-verification', {
       method: 'POST',
       body: JSON.stringify({ email }),
-    });
+    }, false);
   }
 
-  // Refresh Token
-  async refreshToken(refreshToken: string): Promise<{ access_token: string; refresh_token: string }> {
-    return this.request(`/auth/refresh?refresh_token=${refreshToken}`, {
+  // ========================================================================
+  // 6-DIGIT CODE METHODS (NEW)
+  // ========================================================================
+
+  // Email Verification with 6-digit Code
+  async requestVerificationCode(data: EmailVerificationCodeRequest): Promise<{ message: string; success: boolean }> {
+    return this.request('/auth/request-verification-code', {
       method: 'POST',
-    });
+      body: JSON.stringify(data),
+    }, false);
   }
 
-  async updateProfile(data: Partial<User>): Promise<User> {
-    return this.request('/user/profile', {
-      method: 'PUT',
+  async verifyEmailCode(data: EmailVerificationCodeConfirm): Promise<{ message: string; success: boolean }> {
+    return this.request('/auth/verify-email-code', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, false);
+  }
+
+  // Password Reset with 6-digit Code
+  async requestPasswordResetCode(data: PasswordResetCodeRequest): Promise<{ message: string; success: boolean }> {
+    return this.request('/auth/request-password-reset-code', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, false);
+  }
+
+  async resetPasswordWithCode(data: PasswordResetCodeConfirm): Promise<{ message: string; success: boolean }> {
+    return this.request('/auth/reset-password-with-code', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, false);
+  }
+
+  // User Methods
+  async getCurrentUser(): Promise<User> {
+    return this.request('/auth/me');
+  }
+
+  // Site Generation Methods
+  async generateSite(data: SiteGenerationRequest): Promise<GeneratedSite> {
+    return this.request('/sites/generate', {
+      method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  // Sites endpoints
-  async generateSite(request: SiteGenerationRequest): Promise<GeneratedSite> {
-    return this.request('/sites/generate', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
-  }
-
-  // Enhanced generation with real-time status
   async generateSiteWithStatus(
-    request: SiteGenerationRequest,
-    onStatusUpdate: (status: GenerationStatus) => void
+    data: SiteGenerationRequest,
+    onStatusUpdate?: (status: GenerationStatus) => void
   ): Promise<GeneratedSite> {
-    // Имитация реалистичного прогресса
-    const simulateProgress = async () => {
-      const steps = [
-        { progress: 5, message: 'Инициализация генерации...', delay: 500 },
-        { progress: 15, message: 'Анализ типа события...', delay: 800 },
-        { progress: 25, message: 'Подбор цветовой схемы...', delay: 1000 },
-        { progress: 40, message: 'Создание структуры сайта...', delay: 1200 },
-        { progress: 55, message: 'Генерация контента...', delay: 1500 },
-        { progress: 70, message: 'Применение дизайна...', delay: 1000 },
-        { progress: 85, message: 'Оптимизация для мобильных...', delay: 800 },
-        { progress: 95, message: 'Финальная обработка...', delay: 600 },
-      ];
-
-      for (const step of steps) {
-        await new Promise(resolve => setTimeout(resolve, step.delay));
-        onStatusUpdate({
-          step: step.message,
-          progress: step.progress,
-          message: step.message
-        });
+    const generationId = Math.random().toString(36).substring(7);
+    
+    // Create WebSocket connection for status updates
+    if (onStatusUpdate) {
+      const wsUrl = `${this.baseURL.replace('http', 'ws')}/sites/generation-status/${generationId}`;
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === 'status_update' && message.data) {
+            onStatusUpdate(message.data);
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
         }
       };
       
-    // Запускаем имитацию прогресса
-    const progressSimulation = simulateProgress();
-    
-    try {
-      // Запускаем реальную генерацию
-      const result = await this.generateSite(request);
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
       
-      // Дожидаемся завершения имитации прогресса
-      await progressSimulation;
-      
-      // Финальное обновление
-      onStatusUpdate({
-        step: 'completed',
-        progress: 100,
-        message: 'Сайт готов!'
-      });
-
-      // Небольшая задержка перед возвратом результата
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      return result;
-    } catch (error) {
-      onStatusUpdate({
-        step: 'error',
-        progress: 0,
-        message: 'Ошибка генерации'
-      });
-      throw error;
+      // Clean up WebSocket after generation
+      setTimeout(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
+      }, 60000); // Close after 60 seconds
     }
+    
+    // Make the generation request with generation_id
+    return this.request(`/sites/generate?generation_id=${generationId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
-  async getMySites(skip: number = 0, limit: number = 100): Promise<UserSitesResponse> {
-    return this.request(`/sites/my-sites?skip=${skip}&limit=${limit}`);
+  async getUserSites(page: number = 1, limit: number = 10): Promise<UserSitesResponse> {
+    return this.request(`/sites/my-sites?skip=${(page - 1) * limit}&limit=${limit}`);
   }
 
   async getSite(siteId: string): Promise<GeneratedSite> {
     return this.request(`/sites/${siteId}`);
   }
 
-  async updateSite(siteId: string, update: SiteUpdate): Promise<GeneratedSite> {
+  async updateSite(siteId: string, data: SiteUpdate): Promise<GeneratedSite> {
     return this.request(`/sites/${siteId}`, {
       method: 'PUT',
-      body: JSON.stringify(update),
+      body: JSON.stringify(data),
     });
   }
 
@@ -255,110 +274,84 @@ class ApiClient {
     });
   }
 
+  async publishSite(siteId: string): Promise<GeneratedSite> {
+    return this.request(`/sites/${siteId}/publish`, {
+      method: 'POST',
+    });
+  }
+
+  async unpublishSite(siteId: string): Promise<GeneratedSite> {
+    return this.request(`/sites/${siteId}/unpublish`, {
+      method: 'POST',
+    });
+  }
+
+  // Analytics Methods
   async getSiteStatistics(siteId: string): Promise<SiteStatistics> {
-    return this.request(`/sites/${siteId}/statistics`);
+    return this.request(`/sites/${siteId}/analytics`);
   }
 
-  // Public endpoints (no auth required)
-  async getPublicSite(slug: string): Promise<string> {
-    const response = await fetch(`${this.baseURL}/sites/public/${slug}`);
-    if (!response.ok) {
-      throw new Error('Сайт не найден');
-    }
-    return response.text();
+  async trackEvent(data: AnalyticsEvent): Promise<{ success: boolean }> {
+    return this.request('/analytics/track', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, false);
   }
 
-  // ANALYTICS - DISABLED
-  // async recordAnalytics(slug: string, event: AnalyticsEvent): Promise<void> {
-  //   try {
-  //     await fetch(`${this.baseURL}/sites/public/${slug}/analytics`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify(event),
-  //     });
-  //   } catch (error) {
-  //     // Silently fail analytics - don't break user experience
-  //     console.warn('Failed to record analytics:', error);
-  //   }
-  // }
-  
-  // Stub function to prevent errors
-  async recordAnalytics(slug: string, event: AnalyticsEvent): Promise<void> {
-    // Analytics disabled - do nothing
-    if (import.meta.env.DEV) {
-      console.log('Analytics disabled:', slug, event);
-    }
+  // Generation Status
+  async getGenerationStatus(taskId: string): Promise<GenerationStatus> {
+    return this.request(`/generation/status/${taskId}`);
+  }
+
+  // Public site access (no auth required)
+  async getPublicSite(slug: string): Promise<GeneratedSite> {
+    return this.request(`/public/sites/${slug}`, {}, false);
+  }
+
+  async incrementSiteView(siteId: string): Promise<{ success: boolean }> {
+    return this.request(`/public/sites/${siteId}/view`, {
+      method: 'POST',
+    }, false);
   }
 
   // Utility methods
   logout() {
-    this.setToken(null);
+    this.removeToken();
   }
 
   isAuthenticated(): boolean {
     return !!this.authToken;
   }
 
-  getToken(): string | null {
-    return this.authToken;
+  // Helper method for non-JSON requests
+  async requestFile(
+    endpoint: string,
+    options: RequestInit = {},
+    requireAuth: boolean = true
+  ): Promise<Blob> {
+    const url = `${this.baseURL}${endpoint}`;
+    
+    const headers: HeadersInit = {
+      ...options.headers,
+    };
+
+    if (requireAuth && this.authToken) {
+      headers.Authorization = `Bearer ${this.authToken}`;
+    }
+
+    const config: RequestInit = {
+      ...options,
+      headers,
+    };
+
+    const response = await fetch(url, config);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.blob();
   }
 }
 
-// Create and export singleton instance
-export const apiClient = new ApiClient(API_BASE_URL);
-
-// Export individual functions for easier usage
-export const {
-  login,
-  signup,
-  forgotPassword,
-  resetPassword,
-  getCurrentUser,
-  updateProfile,
-  generateSite,
-  getMySites,
-  getSite,
-  updateSite,
-  deleteSite,
-  getSiteStatistics,
-  getPublicSite,
-  recordAnalytics,
-  logout,
-  isAuthenticated,
-  setToken,
-} = apiClient;
-
-// Вспомогательные функции для конкретных API endpoints
-export const authApi = {
-  login: (email: string, password: string) => {
-    const formData = new FormData();
-    formData.append('username', email);
-    formData.append('password', password);
-    return apiClient.postForm('/auth/login', formData, false);
-  },
-  
-  register: (name: string, email: string, password: string) => 
-    apiClient.post('/auth/register', { name, email, password, confirmPassword: password }, false),
-  
-  logout: () => apiClient.post('/auth/logout'),
-  
-  refreshToken: (refreshToken: string) => 
-    apiClient.post('/auth/refresh', { refresh_token: refreshToken }, false),
-  
-  getProfile: () => apiClient.get('/auth/profile'),
-};
-
-export const userApi = {
-  getProfile: () => apiClient.get('/user/profile'),
-  updateProfile: (data: any) => apiClient.put('/user/profile', data),
-  uploadAvatar: (file: File) => {
-    const formData = new FormData();
-    formData.append('avatar', file);
-    return apiClient.postForm('/user/avatar', formData);
-  },
-  getStats: () => apiClient.get('/user/stats'),
-  changePassword: (currentPassword: string, newPassword: string) => 
-    apiClient.post('/user/change-password', { currentPassword, newPassword }),
-}; 
+export const apiClient = new ApiClient(); 

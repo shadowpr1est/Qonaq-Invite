@@ -1,6 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api';
-import type { User, LoginRequest, SignupRequest, GoogleOAuthRequest } from '@/lib/types';
+import type { 
+  User, 
+  LoginRequest, 
+  SignupRequest, 
+  GoogleOAuthRequest,
+  EmailVerificationCodeRequest,
+  EmailVerificationCodeConfirm,
+  PasswordResetCodeRequest,
+  PasswordResetCodeConfirm
+} from '@/lib/types';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage, getErrorSuggestion } from '@/lib/utils';
 
@@ -11,6 +20,11 @@ interface AuthContextType {
   googleOAuth: (data: GoogleOAuthRequest) => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
   resendVerificationEmail: (email: string) => Promise<void>;
+  // New 6-digit code methods
+  requestVerificationCode: (email: string) => Promise<void>;
+  verifyEmailCode: (email: string, code: string) => Promise<void>;
+  requestPasswordResetCode: (email: string) => Promise<void>;
+  resetPasswordWithCode: (email: string, code: string, newPassword: string) => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   isLoading: boolean;
@@ -22,8 +36,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// API базовый URL будет использоваться из api.ts
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,39 +44,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [errorSuggestion, setErrorSuggestion] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Инициализация - проверка сохраненного токена
+  // Initialize auth state on mount
   useEffect(() => {
     const initializeAuth = async () => {
-      const token = apiClient.getToken();
-      
-      if (token) {
-        try {
-          setIsLoading(true);
+      try {
+        if (apiClient.isAuthenticated()) {
           const userData = await apiClient.getCurrentUser();
           setUser(userData);
-        } catch (error) {
-          console.error('Ошибка проверки токена:', error);
-          // Токен невалиден, удаляем его
-          apiClient.logout();
-        } finally {
-          setIsLoading(false);
         }
+      } catch (error) {
+        console.error('Failed to initialize auth:', error);
+        apiClient.logout();
+      } finally {
+        setIsInitialized(true);
       }
-      
-      setIsInitialized(true);
     };
 
     initializeAuth();
   }, []);
 
   const clearAuthData = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
     setUser(null);
+    setError(null);
+    setErrorSuggestion(null);
   };
 
-  const clearError = () => {
+  const clearError = (): void => {
     setError(null);
     setErrorSuggestion(null);
   };
@@ -76,18 +81,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await apiClient.login(credentials);
       
-      // Устанавливаем токен в API клиенте
+      // Set token in API client
       apiClient.setToken(response.access_token);
       
-      // Сохраняем refresh token
+      // Save refresh token
       if (typeof window !== 'undefined') {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
       
-      // Устанавливаем пользователя
+      // Set user
       setUser(response.user);
     } catch (error) {
-      console.error('Ошибка входа:', error);
+      console.error('Login failed:', error);
       const errorMessage = getErrorMessage(error, 'login');
       const suggestion = getErrorSuggestion(error, 'login');
       setError(errorMessage);
@@ -105,20 +110,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await apiClient.signup(data);
       
-      // Устанавливаем токен в API клиенте
+      // Set token in API client
       apiClient.setToken(response.access_token);
       
-      // Сохраняем refresh token
+      // Save refresh token
       if (typeof window !== 'undefined') {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
       
-      // Устанавливаем пользователя
+      // Set user
       setUser(response.user);
     } catch (error) {
-      console.error('Ошибка регистрации:', error);
-      const errorMessage = getErrorMessage(error, 'register');
-      const suggestion = getErrorSuggestion(error, 'register');
+      console.error('Signup failed:', error);
+      const errorMessage = getErrorMessage(error, 'signup');
+      const suggestion = getErrorSuggestion(error, 'signup');
       setError(errorMessage);
       setErrorSuggestion(suggestion);
       throw error;
@@ -140,18 +145,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await apiClient.googleOAuth(data);
       
-      // Устанавливаем токен в API клиенте
+      // Set token in API client
       apiClient.setToken(response.access_token);
       
-      // Сохраняем refresh token
+      // Save refresh token
       if (typeof window !== 'undefined') {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
       
-      // Устанавливаем пользователя
+      // Set user
       setUser(response.user);
     } catch (error) {
-      console.error('Ошибка Google OAuth:', error);
+      console.error('Google OAuth failed:', error);
       const errorMessage = getErrorMessage(error, 'oauth');
       const suggestion = getErrorSuggestion(error, 'oauth');
       setError(errorMessage);
@@ -169,12 +174,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await apiClient.verifyEmail(token);
       
-      // Обновляем статус верификации у текущего пользователя
+      // Update email verification status for current user
       if (user) {
         setUser({ ...user, is_email_verified: true });
       }
     } catch (error) {
-      console.error('Ошибка верификации email:', error);
+      console.error('Email verification failed:', error);
       const errorMessage = getErrorMessage(error, 'verify-email');
       const suggestion = getErrorSuggestion(error, 'verify-email');
       setError(errorMessage);
@@ -192,9 +197,90 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await apiClient.resendVerificationEmail(email);
     } catch (error) {
-      console.error('Ошибка повторной отправки:', error);
+      console.error('Resend verification failed:', error);
       const errorMessage = getErrorMessage(error, 'resend-verification');
       const suggestion = getErrorSuggestion(error, 'resend-verification');
+      setError(errorMessage);
+      setErrorSuggestion(suggestion);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ========================================================================
+  // 6-DIGIT CODE METHODS (NEW)
+  // ========================================================================
+
+  const requestVerificationCode = async (email: string): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    setErrorSuggestion(null);
+    try {
+      await apiClient.requestVerificationCode({ email });
+    } catch (error) {
+      console.error('Request verification code failed:', error);
+      const errorMessage = getErrorMessage(error, 'request-verification-code');
+      const suggestion = getErrorSuggestion(error, 'request-verification-code');
+      setError(errorMessage);
+      setErrorSuggestion(suggestion);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verifyEmailCode = async (email: string, code: string): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    setErrorSuggestion(null);
+    try {
+      await apiClient.verifyEmailCode({ email, code });
+      
+      // Update email verification status for current user
+      if (user) {
+        setUser({ ...user, is_email_verified: true });
+      }
+    } catch (error) {
+      console.error('Email code verification failed:', error);
+      const errorMessage = getErrorMessage(error, 'verify-email-code');
+      const suggestion = getErrorSuggestion(error, 'verify-email-code');
+      setError(errorMessage);
+      setErrorSuggestion(suggestion);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const requestPasswordResetCode = async (email: string): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    setErrorSuggestion(null);
+    try {
+      await apiClient.requestPasswordResetCode({ email });
+    } catch (error) {
+      console.error('Request password reset code failed:', error);
+      const errorMessage = getErrorMessage(error, 'request-password-reset-code');
+      const suggestion = getErrorSuggestion(error, 'request-password-reset-code');
+      setError(errorMessage);
+      setErrorSuggestion(suggestion);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPasswordWithCode = async (email: string, code: string, newPassword: string): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    setErrorSuggestion(null);
+    try {
+      await apiClient.resetPasswordWithCode({ email, code, new_password: newPassword });
+    } catch (error) {
+      console.error('Reset password with code failed:', error);
+      const errorMessage = getErrorMessage(error, 'reset-password-with-code');
+      const suggestion = getErrorSuggestion(error, 'reset-password-with-code');
       setError(errorMessage);
       setErrorSuggestion(suggestion);
       throw error;
@@ -216,6 +302,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     googleOAuth,
     verifyEmail,
     resendVerificationEmail,
+    requestVerificationCode,
+    verifyEmailCode,
+    requestPasswordResetCode,
+    resetPasswordWithCode,
     logout,
     updateUser,
     isLoading,
