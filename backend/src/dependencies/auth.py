@@ -7,7 +7,6 @@ from src.users.models import User
 from src.db.db import get_db
 from src.core.security import verify_token
 import logging
-from uuid import UUID
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +37,8 @@ async def get_current_user(
             logger.warning("Token missing user ID (sub)")
             raise credentials_exception
             
-        # Query user from database
-        stmt = select(User).where(User.id == UUID(user_id))
+        # Query user from database (string id)
+        stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)
         user = result.scalar_one_or_none()
         
