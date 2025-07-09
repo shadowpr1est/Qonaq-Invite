@@ -48,6 +48,13 @@ class ApiClient {
     }
   }
 
+  private getToken(): string | null {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('access_token');
+    }
+    return this.authToken;
+  }
+
   setToken(token: string) {
     this.authToken = token;
     if (typeof window !== 'undefined') {
@@ -75,8 +82,10 @@ class ApiClient {
       ...options.headers,
     };
 
-    if (requireAuth && this.authToken) {
-      headers.Authorization = `Bearer ${this.authToken}`;
+    // Always get the latest token from storage
+    const token = this.getToken();
+    if (requireAuth && token) {
+      headers.Authorization = `Bearer ${token}`;
     }
 
     const config: RequestInit = {
