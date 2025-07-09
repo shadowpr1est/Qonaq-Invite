@@ -1,25 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+import uuid
+from datetime import datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException, status, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
-import logging
-from uuid import UUID
 
-from src.core.security import create_token_pair, verify_token
+from src.core.config import settings
+from src.core.security import create_token_pair, get_password_hash
 from src.db.db import get_db
-from src.users.service import UserService
-from src.users.schemas import (
-    UserCreate, UserResponse, AuthResponse, 
-    ForgotPasswordRequest, ResetPasswordRequest, UserLogin,
-    GoogleOAuthCreate, EmailVerificationRequest, EmailVerificationConfirm,
-    EmailVerificationCodeRequest, EmailVerificationCodeConfirm,
-    PasswordResetCodeRequest, PasswordResetCodeConfirm
-)
 from src.dependencies.auth import get_current_user
-from src.users.models import User as UserModel
 from src.services.email_service import email_service
+from src.users.models import User as UserModel
+from src.users.schemas import UserCreate, UserLogin, UserResponse, GoogleOAuthCreate, \
+    EmailVerificationConfirm, EmailVerificationRequest, ForgotPasswordRequest, ResetPasswordRequest, \
+    AuthResponse, EmailVerificationCodeRequest, EmailVerificationCodeConfirm, PasswordResetCodeRequest, \
+    PasswordResetCodeConfirm
+from src.users.service import UserService
+import logging
+
+# Получаем логгер стандартным способом
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
 
 
 @router.post("/register", response_model=AuthResponse)
@@ -27,7 +27,7 @@ async def register(
     user_data: UserCreate,
     db: AsyncSession = Depends(get_db)
 ):
-    """Register new user and send verification email with 6-digit code"""
+    """Register a new user"""
     try:
         user_service = UserService(db)
         
@@ -36,24 +36,20 @@ async def register(
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User with this email already exists"
+                detail="Email already registered"
             )
         
-        # Create user with verification code
-        user = await user_service.create_user(user_data, send_verification=True)
+        # Create user
+        user = await user_service.create_user(user_data)
         
-        # Send verification code email
-        if user.email_verification_code:
-            await email_service.send_verification_code_email(
-                user.email,
-                user.name,
-                user.email_verification_code
-            )
+        # Generate and send verification code
+        verification_code = await user_service.generate_email_verification_code(user.email)
+        await email_service.send_verification_code_email(user.email, user.name, verification_code)
         
         # Generate token pair
         access_token, refresh_token = create_token_pair(user.id)
         
-        logger.info(f"User registered successfully: {user.email}")
+        logger.info(f"User registered successfully and verification email sent to: {user.email}")
         
         return AuthResponse(
             access_token=access_token,
@@ -98,7 +94,7 @@ async def login(
         
         # Generate token pair
         access_token, refresh_token = create_token_pair(user.id)
-        
+            
         logger.info(f"User logged in successfully: {user.email}")
         
         return AuthResponse(
@@ -114,7 +110,7 @@ async def login(
                 is_email_verified=user.is_email_verified
             )
         )
-        
+            
     except HTTPException:
         raise
     except Exception as e:
@@ -279,34 +275,25 @@ async def request_password_reset_code(
     request: PasswordResetCodeRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """Request 6-digit password reset code"""
+    """Request 6-digit code to reset password"""
     try:
         user_service = UserService(db)
         
-        # Generate reset code
-        reset_code = await user_service.generate_password_reset_code(request.email)
+        # Generate new password reset code
+        new_code = await user_service.generate_password_reset_code(request.email)
         
-        # Always return success for security (don't reveal if email exists)
-        logger.info(f"Password reset code requested for email: {request.email}")
-        
-        if reset_code:
-            # Get user to send email
+        if new_code:
             user = await user_service.get_by_email(request.email)
             if user:
-                await email_service.send_password_reset_code_email(
-                    user.email,
-                    user.name,
-                    reset_code
-                )
-                logger.info(f"Password reset code sent to: {request.email}")
-            
+                await email_service.send_password_reset_code_email(user.email, user.name, new_code)
+        
         return {
-            "message": "If the email exists, password reset code has been sent",
+            "message": "If your email is in our database, you will receive a password reset code.",
             "success": True
         }
         
     except Exception as e:
-        logger.error(f"Request password reset code error: {str(e)}")
+        logger.error(f"Request password reset code failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error"
@@ -318,34 +305,30 @@ async def reset_password_with_code(
     request: PasswordResetCodeConfirm,
     db: AsyncSession = Depends(get_db)
 ):
-    """Reset password using 6-digit code"""
+    """Reset password with 6-digit code and new password"""
     try:
         user_service = UserService(db)
         
-        # Verify code and update password
-        success = await user_service.verify_password_reset_code(
-            request.email, 
-            request.code, 
-            request.new_password
-        )
+        # Reset password with code
+        success = await user_service.reset_password_with_code(request.email, request.code, request.new_password)
         
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired reset code"
+                detail="Invalid or expired password reset code."
             )
-        
+            
         logger.info(f"Password reset successfully with code for email: {request.email}")
-        
+            
         return {
-            "message": "Password has been reset successfully",
+            "message": "Your password has been reset successfully. You can now log in with your new password.",
             "success": True
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Reset password with code error: {str(e)}")
+        logger.error(f"Password reset with code failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error"
@@ -353,7 +336,7 @@ async def reset_password_with_code(
 
 
 # ========================================================================
-# LEGACY ENDPOINTS (FOR BACKWARD COMPATIBILITY)
+# LEGACY TOKEN-BASED METHODS (to be deprecated)
 # ========================================================================
 
 @router.post("/verify-email", response_model=dict)
@@ -361,20 +344,16 @@ async def verify_email(
     verification: EmailVerificationConfirm,
     db: AsyncSession = Depends(get_db)
 ):
-    """Verify user email with token (legacy method)"""
+    """Verify user email with token"""
     try:
         user_service = UserService(db)
-        
-        # Verify email with token
         user = await user_service.verify_email(verification.token)
-        
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid or expired verification token"
             )
         
-        # Send welcome email
         await email_service.send_welcome_email(user.email, user.name)
         
         logger.info(f"Email verified successfully for user: {user.email}")
@@ -383,7 +362,6 @@ async def verify_email(
             "message": "Email verified successfully! Welcome to Invitly! 🎉",
             "success": True
         }
-        
     except HTTPException:
         raise
     except Exception as e:
@@ -393,39 +371,27 @@ async def verify_email(
             detail="Internal server error during email verification"
         )
 
-
 @router.post("/resend-verification", response_model=dict)
 async def resend_verification(
     request: EmailVerificationRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """Resend email verification (legacy method)"""
+    """Resend email verification token"""
     try:
         user_service = UserService(db)
-        
-        # Generate new verification token
-        new_token = await user_service.resend_verification_email(request.email)
-        
-        if not new_token:
-            # Don't reveal if email exists or is already verified for security
-            return {
-                "message": "If the email exists and is not verified, a new verification email has been sent",
-                "success": True
-            }
-        
-        # Get user to send email
         user = await user_service.get_by_email(request.email)
-        if user:
-            await email_service.send_verification_email(
-                user.email,
-                user.name,
-                new_token
-            )
         
-        return {
-            "message": "If the email exists and is not verified, a new verification email has been sent",
-            "success": True
-        }
+        if not user or user.is_email_verified:
+            # Don't reveal if user exists or is already verified
+            return {"message": "If the email exists and is not verified, a new verification link has been sent"}
+
+        # Generate new verification token and send email
+        verification_token = await user_service.generate_email_verification_token(user.email)
+        await email_service.send_verification_email(user.email, user.name, verification_token)
+        
+        logger.info(f"Resent verification email to: {user.email}")
+        
+        return {"message": "If the email exists and is not verified, a new verification link has been sent"}
         
     except Exception as e:
         logger.error(f"Resend verification failed: {str(e)}")
@@ -440,32 +406,20 @@ async def forgot_password(
     request: ForgotPasswordRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """Send password reset email (legacy method)"""
+    """Send password reset email with token"""
     try:
         user_service = UserService(db)
-        
-        # Check if user exists
         user = await user_service.get_by_email(request.email)
         
-        # Always return success for security (don't reveal if email exists)
-        # In production, you would send actual email here
-        logger.info(f"Password reset requested for email: {request.email}")
-        
         if user:
-            # Generate reset token (in production, store this in database with expiration)
-            reset_token = create_token_pair(user.id)[0]  # Use access token as reset token
-            
-            # Here you would send email with reset link
-            # For now, just log it
-            logger.info(f"Reset token for {request.email}: {reset_token}")
-            
-        return {
-            "message": "If the email exists, password reset instructions have been sent",
-            "success": True
-        }
+            password_reset_token = await user_service.generate_password_reset_token(user.email)
+            await email_service.send_password_reset_email(user.email, user.name, password_reset_token)
+            logger.info(f"Password reset email sent to: {user.email}")
+
+        return {"message": "If your email is in our database, you will receive a password reset link."}
         
     except Exception as e:
-        logger.error(f"Forgot password error: {str(e)}")
+        logger.error(f"Forgot password request failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error"
@@ -477,55 +431,39 @@ async def reset_password(
     request: ResetPasswordRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """Reset password using token (legacy method)"""
+    """Reset password with token"""
     try:
-        # Verify reset token
-        payload = verify_token(request.token)
-        if payload is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired reset token"
-            )
-        
-        # Get user ID from token
-        user_id = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid token payload"
-            )
-        
         user_service = UserService(db)
-        
-        # Update user password - fix UUID conversion
-        success = await user_service.update_password(UUID(user_id), request.new_password)
-        
-        if not success:
+        user = await user_service.reset_password(request.token, request.new_password)
+        if not user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to update password"
+                detail="Invalid or expired password reset token."
             )
         
-        return {
-            "message": "Password has been reset successfully",
-            "success": True
-        }
+        logger.info(f"Password for {user.email} has been reset successfully.")
+        
+        return {"message": "Your password has been reset successfully. You can now log in with your new password."}
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Reset password error: {str(e)}")
+        logger.error(f"Password reset failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error"
         )
 
 
+# ========================================================================
+# USER PROFILE & MISC
+# ========================================================================
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
     current_user: UserModel = Depends(get_current_user)
 ):
-    """Get current user information"""
+    """Get current user's profile information"""
     return UserResponse(
         id=str(current_user.id),
         email=current_user.email,
@@ -535,39 +473,42 @@ async def get_current_user_info(
         is_email_verified=current_user.is_email_verified
     )
 
-
 @router.put("/profile", response_model=UserResponse)
 async def update_profile(
     profile_data: dict,
     current_user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Update user profile"""
+    """Update user's profile information"""
     try:
         user_service = UserService(db)
         
-        # Update allowed fields
-        if 'name' in profile_data:
-            current_user.name = profile_data['name']
-        if 'bio' in profile_data:
-            current_user.bio = profile_data['bio']
+        # Ensure only allowed fields are updated
+        allowed_fields = {"name", "bio"}
+        update_data = {key: value for key, value in profile_data.items() if key in allowed_fields}
         
-        await db.commit()
-        await db.refresh(current_user)
+        if not update_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No valid fields to update."
+            )
+            
+        updated_user = await user_service.update_user(current_user.id, **update_data)
         
-        logger.info(f"Profile updated for user: {current_user.email}")
+        logger.info(f"Profile updated for user: {updated_user.email}")
         
         return UserResponse(
-            id=str(current_user.id),
-            email=current_user.email,
-            name=current_user.name,
-            avatar=current_user.avatar,
-            bio=current_user.bio,
-            is_email_verified=current_user.is_email_verified
+            id=str(updated_user.id),
+            email=updated_user.email,
+            name=updated_user.name,
+            avatar=updated_user.avatar,
+            bio=updated_user.bio,
+            is_email_verified=updated_user.is_email_verified
         )
-        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Profile update failed: {str(e)}")
+        logger.error(f"Profile update failed for {current_user.email}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error during profile update"
@@ -580,39 +521,32 @@ async def change_password(
     current_user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Change user password"""
+    """Change current user's password"""
     try:
         user_service = UserService(db)
         
-        current_password = password_data.get('current_password')
-        new_password = password_data.get('new_password')
+        old_password = password_data.get("old_password")
+        new_password = password_data.get("new_password")
         
-        if not current_password or not new_password:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Both current_password and new_password are required"
-            )
-        
-        # Verify current password
-        if not user_service.verify_password(current_password, current_user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is incorrect"
-            )
-        
-        # Update password
-        current_user.hashed_password = user_service.get_password_hash(new_password)
-        await db.commit()
+        if not old_password or not new_password:
+            raise HTTPException(status_code=400, detail="Old and new passwords are required.")
+
+        # Verify old password
+        if not await user_service.verify_password(old_password, current_user.hashed_password):
+            raise HTTPException(status_code=400, detail="Incorrect old password.")
+            
+        # Update to new password
+        await user_service.update_password(current_user.id, new_password)
         
         logger.info(f"Password changed for user: {current_user.email}")
         
-        return {"message": "Password successfully changed"}
+        return {"message": "Password changed successfully."}
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Password change failed: {str(e)}")
+        logger.error(f"Password change failed for {current_user.email}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error during password change"
+            detail="Internal server error."
         ) 

@@ -1,28 +1,37 @@
-# FastAPI and core dependencies
 fastapi[standard]==0.115.12
 uvicorn[standard]==0.32.1
 
+# Password Hashing & Security
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+pyjwt[crypto]==2.8.0
+cryptography==45.0.4
+
 # Database
-sqlalchemy[asyncio]==2.0.36
-asyncpg==0.30.0
+sqlalchemy==2.0.25
+asyncpg==0.29.0
 psycopg2-binary==2.9.9
 alembic==1.14.0
-
-# Authentication and Security  
-PyJWT==2.8.0
-cryptography==45.0.4
-bcrypt==4.1.2
-passlib[bcrypt]==1.7.4
-python-multipart>=0.0.18
+greenlet==3.0.3
+mako==1.3.8
 
 # Configuration
 pydantic==2.10.4
-pydantic-settings==2.7.0
+pydantic-settings==2.10.1
+python-dotenv==1.0.1
 
-# OpenAI
-openai==1.58.1
+# OpenAI and HTTP client
+# Using specific versions known to be compatible to resolve dependency conflicts
+openai>=1.23.0
+httpx>=0.27.0
 
 # Development and Testing
-pytest==8.3.4
-pytest-asyncio==0.24.0
-httpx==0.28.1
+pytest==7.4.0
+pytest-asyncio==0.21.1
+requests==2.31.0
+Faker==19.6.2
+
+# Email & Other
+emails==0.6
+python-multipart>=0.0.9
+typing-extensions==4.13.2

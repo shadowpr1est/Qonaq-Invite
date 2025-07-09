@@ -6,11 +6,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/hooks/use-auth';
-import { GoogleOAuthButton } from '@/components/GoogleOAuthButton';
-
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator";
+// import { GoogleOAuthButton } from "@/components/GoogleOAuthButton";
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -404,10 +404,10 @@ const Signup = () => {
                 </div>
                 
                 <div className="mt-4">
-                  <GoogleOAuthButton 
+                  {/* <GoogleOAuthButton 
                     mode="signup" 
                     disabled={isLoading}
-                  />
+                  /> */}
                 </div>
               </motion.div>
 

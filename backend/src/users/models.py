@@ -46,7 +46,6 @@ class User(Base):
         default=False,
         nullable=False
     )
-    # Email verification fields
     is_email_verified = Column(
         Boolean,
         default=False,

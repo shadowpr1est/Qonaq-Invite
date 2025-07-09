@@ -208,7 +208,7 @@ class UserService:
     def get_password_hash(self, password: str) -> str:
         """Hash a password"""
         return get_password_hash(password)
-
+    
     async def update_password(self, user_id: uuid.UUID, new_password: str) -> bool:
         """Update user password"""
         try:

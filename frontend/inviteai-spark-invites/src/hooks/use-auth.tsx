@@ -47,15 +47,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Initialize auth state on mount
   useEffect(() => {
     const initializeAuth = async () => {
-      try {
+        try {
         if (apiClient.isAuthenticated()) {
           const userData = await apiClient.getCurrentUser();
           setUser(userData);
         }
-      } catch (error) {
+        } catch (error) {
         console.error('Failed to initialize auth:', error);
-        apiClient.logout();
-      } finally {
+          apiClient.logout();
+        } finally {
         setIsInitialized(true);
       }
     };

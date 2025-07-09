@@ -682,23 +682,19 @@ Generate a complete, production-ready React component that embodies the {site_da
                     keyframes: {{
                         float: {{ 
                             '0%, 100%': {{ transform: 'translateY(0px) rotate(0deg)' }}, 
-                            '50%': {{ transform: 'translateY(-30px) rotate(5deg)' }} 
+                            '50%': {{ transform: 'translateY(-20px) rotate(2deg)' }} 
                         }},
                         glow: {{ 
-                            '0%': {{ opacity: '0.4', filter: 'blur(8px)', transform: 'scale(1)' }}, 
-                            '100%': {{ opacity: '0.8', filter: 'blur(12px)', transform: 'scale(1.1)' }} 
+                            '0%': {{ opacity: '0.4' }}, 
+                            '100%': {{ opacity: '0.8' }} 
                         }},
                         fadeIn: {{ 
-                            '0%': {{ opacity: '0', transform: 'translateY(40px) scale(0.9)' }}, 
-                            '100%': {{ opacity: '1', transform: 'translateY(0) scale(1)' }} 
-                        }},
-                        fadeInUp: {{ 
-                            '0%': {{ opacity: '0', transform: 'translateY(60px)' }}, 
+                            '0%': {{ opacity: '0', transform: 'translateY(30px)' }}, 
                             '100%': {{ opacity: '1', transform: 'translateY(0)' }} 
                         }},
-                        bounceSoft: {{
-                            '0%, 100%': {{ transform: 'translateY(0)' }},
-                            '50%': {{ transform: 'translateY(-10px)' }}
+                        fadeInUp: {{ 
+                            '0%': {{ opacity: '0', transform: 'translateY(40px)' }}, 
+                            '100%': {{ opacity: '1', transform: 'translateY(0)' }} 
                         }}
                     }}
                 }}
@@ -714,7 +710,7 @@ Generate a complete, production-ready React component that embodies the {site_da
         }}
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br {palette['hero_gradient']} antialiased overflow-x-hidden">
+<body class="min-h-screen bg-gradient-to-br {palette['hero_gradient']} text-white overflow-x-hidden">
     <!-- Hero Section -->
     <section class="relative min-h-screen flex items-center justify-center overflow-hidden">
         <!-- Animated Background Elements -->
@@ -1006,6 +1002,14 @@ Generate a complete, production-ready React component that embodies the {site_da
             }}
         }}
     </script>
+    <style>
+        .text-shadow {{ text-shadow: 0 4px 8px rgba(0,0,0,0.3); }}
+        .glass-effect {{ 
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }}
+    </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br {palette['hero']} text-white overflow-x-hidden">
     <div class="relative min-h-screen flex items-center justify-center">

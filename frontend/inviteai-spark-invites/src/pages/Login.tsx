@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/hooks/use-auth';
-import { GoogleOAuthButton } from '@/components/GoogleOAuthButton';
+// import { GoogleOAuthButton } from '@/components/GoogleOAuthButton';
 
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +27,7 @@ import {
   Loader2,
   User
 } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 const loginSchema = z.object({
   email: z.string().email('Некорректный email адрес'),
@@ -354,12 +355,12 @@ const Login = () => {
                   </div>
                 </div>
                 
-                <div className="mt-4">
+                {/* <div className="mt-4">
                   <GoogleOAuthButton 
                     mode="login" 
                     disabled={isLoading}
                   />
-                </div>
+                </div> */}
               </motion.div>
 
               <motion.div

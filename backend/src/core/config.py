@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     # Application
     PROJECT_NAME: str = "Invitly API"
     VERSION: str = "1.0.0"
-    ENVIRONMENT: str = Field(default="production", env="ENVIRONMENT")
+    ENVIRONMENT: str = Field(default="development", env="ENVIRONMENT")
     DEBUG: bool = Field(default=False, env="DEBUG")
     
     # PostgreSQL Database (из .env)

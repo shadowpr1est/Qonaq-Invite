@@ -11,7 +11,7 @@ from ..models.sites import Site, SiteAnalytics
 from ..users.models import User
 from ..schemas.sites import (
     SiteGenerationRequest, SiteGenerationResponse, SitePreview, 
-    SiteUpdate, SiteStatistics, UserSitesResponse, SiteAnalyticsEvent
+    SiteUpdate, SiteStatistics, UserSitesResponse, SiteAnalyticsEvent, EventType, ThemeStyle, ColorScheme
 )
 from .site_generator import site_generator, SiteGenerationRequest as GeneratorRequest, StatusCallback
 
@@ -82,6 +82,13 @@ class SitesService:
             # Create slug from generated title
             slug = SitesService._generate_slug(react_site_structure.title, existing_slugs)
             
+            # --- Приведение к Enum ---
+            event_type = EventType(request.event_type) if not isinstance(request.event_type, EventType) else request.event_type
+            theme = ThemeStyle(request.theme) if not isinstance(request.theme, ThemeStyle) else request.theme
+            color_preferences = None
+            if request.color_preferences:
+                color_preferences = ColorScheme(request.color_preferences) if not isinstance(request.color_preferences, ColorScheme) else request.color_preferences
+            
             # Create site record with React data and HTML preview
             site_structure_data = react_site_structure.model_dump()
             site_structure_data['react_component_code'] = react_content  # Store React code in structure
@@ -91,12 +98,12 @@ class SitesService:
                 title=react_site_structure.title,
                 slug=slug,
                 meta_description=react_site_structure.meta_description,
-                event_type=request.event_type,
-                theme=request.theme,
+                event_type=event_type.value,
+                theme=theme.value,
                 site_structure=site_structure_data,
                 html_content=html_preview,  # HTML preview for iframe display
                 content_details=request.content_details,  # Store original form data
-                color_preferences=request.color_preferences,
+                color_preferences=color_preferences.value if color_preferences else None,
                 style_preferences=request.style_preferences,
                 target_audience=request.target_audience,
                 is_published=False  # Draft by default
