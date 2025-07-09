@@ -43,8 +43,8 @@ async def register(
         user = await user_service.create_user(user_data)
         
         # Generate and send verification code
-        verification_code = await user_service.generate_email_verification_code(user.email)
-        await email_service.send_verification_code_email(user.email, user.name, verification_code)
+        # verification_code = await user_service.generate_email_verification_code(user.email)
+        # await email_service.send_verification_code_email(user.email, user.name, verification_code)
         
         # Generate token pair
         access_token, refresh_token = create_token_pair(user.id)

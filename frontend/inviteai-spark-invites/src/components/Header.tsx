@@ -112,12 +112,22 @@ const Header = () => {
           >
             <a 
               href="/"
-              className={`text-xl font-bold font-display transition-colors ${
-                isScrolled ? 'text-white' : 'text-foreground'
-              }`}
+              className="flex flex-row items-center gap-3 group select-none"
               aria-label="Invitly AI - главная страница"
             >
-              InvitlyAI
+              <img src={isScrolled ? "/invert.png" : "/logo.png"} alt="Invitly Logo" className={`w-10 h-10 md:w-12 md:h-12 drop-shadow-lg` } />
+              <span
+                className={
+                  `text-xl md:text-2xl font-extrabold leading-[1.1] group-hover:opacity-90 transition ` +
+                  (isScrolled
+                    ? "text-white"
+                    : "bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-700 bg-clip-text text-transparent"
+                  )
+                }
+                style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700}}
+              >
+                Invitly AI
+              </span>
             </a>
           </motion.div>
 

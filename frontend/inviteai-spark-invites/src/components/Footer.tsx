@@ -19,32 +19,33 @@ const Footer = () => {
           {/* Logo and Description */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-r from-white to-brand-200 rounded-xl flex items-center justify-center">
-                <span className="text-2xl font-bold text-brand-600">AI</span>
-              </div>
-              <h3 className="text-2xl font-bold">InviteAI</h3>
+              
+                <img src="/logo.png" alt="Invitly Logo" className="w-16 h-16" />
+              
+
+              <h3 className="text-2xl font-bold" style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700 }}>Invitly AI</h3>
             </div>
             <p className="text-white/80 mb-6 max-w-md">
-              Создавайте красивые цифровые приглашения за минуту. 
-              Простой конструктор с готовыми шаблонами для любого события.
+              Создавайте красивые цифровые приглашения за минуту.<br />
+              Современный конструктор с готовыми шаблонами для любого события.
             </p>
             <div className="flex gap-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 className="text-black border-white/30 hover:bg-white/10 hover:text-white"
               >
                 Telegram
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 className="text-black border-white/30 hover:bg-white/10 hover:text-white"
               >
                 Instagram
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 className="text-black border-white/30 hover:bg-white/10 hover:text-white"
               >
@@ -78,28 +79,26 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="border-t border-white/20 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-white/60 text-sm">
-            © 2024 InviteAI. Все права защищены.
+            © 2024 Invitly AI. Все права защищены.
           </p>
-          
+
           {/* Language Switcher */}
           <div className="flex bg-white/10 rounded-lg p-1">
             <button
               onClick={() => setLanguage('RU')}
-              className={`px-3 py-1 text-sm rounded transition-colors ${
-                language === 'RU' 
-                  ? 'bg-white text-brand-600 font-semibold' 
+              className={`px-3 py-1 text-sm rounded transition-colors ${language === 'RU'
+                  ? 'bg-white text-brand-600 font-semibold'
                   : 'text-white/80 hover:text-white'
-              }`}
+                }`}
             >
               RU
             </button>
             <button
               onClick={() => setLanguage('KZ')}
-              className={`px-3 py-1 text-sm rounded transition-colors ${
-                language === 'KZ' 
-                  ? 'bg-white text-brand-600 font-semibold' 
+              className={`px-3 py-1 text-sm rounded transition-colors ${language === 'KZ'
+                  ? 'bg-white text-brand-600 font-semibold'
                   : 'text-white/80 hover:text-white'
-              }`}
+                }`}
             >
               ҚЗ
             </button>
@@ -107,7 +106,7 @@ const Footer = () => {
         </div>
       </div>
 
-      
+
     </footer>
   );
 };

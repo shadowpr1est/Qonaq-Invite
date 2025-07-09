@@ -1,31 +1,10 @@
 import React from 'react';
 
-interface LoadingSpinnerProps {
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  className?: string;
-  text?: string;
-}
-
-const sizePx = {
-  sm: 24,
-  md: 40,
-  lg: 56,
-  xl: 72,
-};
-
-export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 'md', className = '', text }) => (
-  <div className={`flex flex-col items-center justify-center space-y-4 ${className}`}>
-    <div
-      className="invitly-loader"
-      style={{ width: sizePx[size], height: sizePx[size] }}
-      role="status"
-      aria-label="Загрузка"
-    />
-    {text && (
-      <p className="text-sm text-gray-600 font-medium animate-pulse">{text}</p>
-    )}
-  </div>
+const Loader: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <div className={`invitly-loader ${className}`}></div>
 );
+
+export default Loader;
 
 // Добавляем стиль только один раз
 if (typeof window !== 'undefined' && !document.getElementById('invitly-loader-style')) {
@@ -33,6 +12,7 @@ if (typeof window !== 'undefined' && !document.getElementById('invitly-loader-st
   style.id = 'invitly-loader-style';
   style.innerHTML = `
 .invitly-loader {
+  width: 50px;
   aspect-ratio: 1;
   border-radius: 50%;
   background: 

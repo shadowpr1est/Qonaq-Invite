@@ -1,438 +1,92 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
+import { useAuth } from '../hooks/use-auth';
 import { Link, useNavigate } from 'react-router-dom';
+import AuthCanvasBackground from '../components/AuthCanvasBackground';
+import Loader from '../components/Loader';
 
-import { useAuth } from '@/hooks/use-auth';
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator";
-// import { GoogleOAuthButton } from "@/components/GoogleOAuthButton";
-import MainLayout from '@/components/MainLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  AlertCircle, 
-  User, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  ArrowRight,
-  CheckCircle,
-  Loader2,
-  Shield
-} from 'lucide-react';
-
-const signupSchema = z.object({
-  name: z.string().min(2, 'Имя должно содержать минимум 2 символа'),
-  email: z.string().email('Некорректный email адрес'),
-  password: z.string()
-    .min(8, 'Пароль должен содержать минимум 8 символов')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Пароль должен содержать минимум одну заглавную букву, одну строчную букву и одну цифру'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Пароли не совпадают",
-  path: ["confirmPassword"],
-});
-
-type SignupFormData = z.infer<typeof signupSchema>;
-
-const Signup = () => {
+export default function Signup() {
+  const { signup, isLoading, error } = useAuth();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [wasSubmitted, setWasSubmitted] = useState(false);
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  
-  const form = useForm<SignupFormData>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-    },
-  });
 
-  const { signup, isLoading: authLoading, error, errorSuggestion, clearError } = useAuth();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWasSubmitted(true);
+    if (password !== confirm) return;
+    const ok = await signup(name, email, password);
+    if (ok) navigate('/dashboard');
+  };
 
-  // Очищаем ошибку при изменении формы
-  useEffect(() => {
-    if (error) {
-      const subscription = form.watch(() => clearError());
-      return () => subscription.unsubscribe();
-    }
-  }, [error, clearError, form]);
-
-  const handleSubmit = useCallback(async (data: SignupFormData) => {
-    try {
-      await signup({
-        name: data.name,
-        email: data.email,
-        password: data.password
-      });
-      
-      setIsSuccess(true);
-      setTimeout(() => {
-        navigate('/');
-      }, 1500);
-    } catch (error) {
-      console.error('Signup error:', error);
-    }
-  }, [signup, navigate]);
-
-  const isLoading = form.formState.isSubmitting || authLoading;
-
-  // Success animation
-  if (isSuccess) {
     return (
-      <MainLayout>
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 px-4 pt-20">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 200, damping: 20 }}
-            className="text-center"
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <AuthCanvasBackground />
+      <div className="z-10 w-full max-w-md mx-auto p-8 bg-white rounded-2xl shadow-xl flex flex-col items-center animate-fade-in border border-gray-100">
+        {/* Логотип и текст Invitly: не группировать, минимальный отступ, текст не урезан */}
+        <Link to="/" className="mb-10 flex flex-col items-center select-none group">
+          <img src="/logo.png" alt="Invitly Logo" className="w-[100px] h-[100px] drop-shadow-lg" />
+          <span
+            className="block text-4xl font-extrabold bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-700 bg-clip-text text-transparent leading-[1.2] mt-2 pb-2 group-hover:opacity-90 transition"
+            style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800, marginTop: '-10px' }}
           >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg"
-            >
-              <CheckCircle className="w-10 h-10 text-white" />
-            </motion.div>
-            <motion.h2
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="text-2xl font-bold text-gray-900 mb-2"
-            >
-              Аккаунт создан! 🎉
-            </motion.h2>
-            <motion.p
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="text-gray-600"
-            >
-              Добро пожаловать в FluentAI!
-            </motion.p>
-          </motion.div>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  return (
-    <MainLayout>
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 px-4 pt-20 relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <motion.div
-            animate={{
-              rotate: 360,
-              scale: [1, 1.1, 1],
-            }}
-            transition={{
-              duration: 20,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-xl"
+            Invitly AI
+          </span>
+        </Link>
+        {/* <Link to="/" className="mb-4 text-sm text-gray-400 hover:text-indigo-500 transition-colors">← На главную</Link> */}
+        <h1 className="text-3xl font-bold mb-2 text-gray-900">Регистрация</h1>
+        {/* <p className="mb-6 text-gray-500">Создайте аккаунт, чтобы начать пользоваться Invitly</p> */}
+        <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit} autoComplete="on">
+          <input
+            type="text"
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition bg-white text-gray-900 placeholder-gray-400"
+            placeholder="Имя"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            required
           />
-          <motion.div
-            animate={{
-              rotate: -360,
-              scale: [1, 1.2, 1],
-            }}
-            transition={{
-              duration: 25,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            className="absolute -bottom-20 -left-20 w-60 h-60 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-xl"
+          <input
+            type="email"
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition bg-white text-gray-900 placeholder-gray-400"
+            placeholder="Email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
           />
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ 
-            type: "spring", 
-            stiffness: 100, 
-            damping: 20,
-            delay: 0.1
-          }}
-          className="relative z-10"
-        >
-          <Card className="w-full max-w-[460px] shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="text-center px-4 sm:px-8 md:px-12 py-8 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-t-lg">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.3, type: "spring" }}
-                className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm"
-              >
-                <User className="w-8 h-8 text-white" />
-              </motion.div>
-              <CardTitle className="text-3xl font-bold mb-2">
-                Создать аккаунт
-              </CardTitle>
-            </CardHeader>
-            
-            <CardContent className="px-4 sm:px-8 md:px-12 py-8 w-full">
-              <AnimatePresence mode="sync">
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="mb-6 space-y-3"
-                  >
-                    <Alert variant="destructive" className="border-red-200 bg-red-50">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription className="text-red-800 min-h-[20px] md:min-h-[24px] max-h-[40px] block w-full text-left">{error}</AlertDescription>
-                    </Alert>
-                    {errorSuggestion && (
-                      <Alert className="border-blue-200 bg-blue-50">
-                        <AlertDescription className="text-blue-800 flex items-start gap-2">
-                          <span className="text-blue-600 font-medium">💡</span>
-                          <span className="min-h-[20px] md:min-h-[24px] max-h-[40px] block w-full text-left">{errorSuggestion}</span>
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5 w-full">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.4 }}
-                        className="w-full"
-                      >
-                        <FormItem className="w-full">
-                          <FormLabel className="text-base font-semibold text-gray-700 flex items-center gap-2">
-                            <User className="w-4 h-4 text-purple-600" />
-                            Полное имя
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="text"
-                              placeholder="Ваше полное имя"
-                              className="h-12 text-base pl-4 pr-4 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage id="name-error" className="text-red-600 min-h-[24px] max-h-[40px] block w-full text-left overflow-hidden break-words whitespace-normal" role="alert" />
-                        </FormItem>
-                      </motion.div>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.5 }}
-                        className="w-full"
-                      >
-                        <FormItem className="w-full">
-                          <FormLabel className="text-base font-semibold text-gray-700 flex items-center gap-2">
-                            <Mail className="w-4 h-4 text-purple-600" />
-                            Email адрес
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="email"
-                              placeholder="example@email.com"
-                              className="h-12 text-base pl-4 pr-4 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full max-w-[480px] mx-auto"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage id="email-error" className="text-red-600 min-h-[24px] max-h-[40px] block w-full text-left overflow-hidden break-words whitespace-normal" role="alert" />
-                        </FormItem>
-                      </motion.div>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.6 }}
-                        className="w-full"
-                      >
-                        <FormItem className="w-full">
-                          <FormLabel className="text-base font-semibold text-gray-700 flex items-center gap-2">
-                            <Lock className="w-4 h-4 text-purple-600" />
-                            Пароль
-                          </FormLabel>
-                          <FormControl>
-                            <div className="relative w-full">
-                              <Input
-                                type={showPassword ? "text" : "password"}
-                                placeholder="••••••••"
-                                className="h-12 text-base pl-4 pr-12 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full max-w-[480px] mx-auto"
-                                {...field}
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100"
-                                onClick={() => setShowPassword(!showPassword)}
-                              >
-                                {showPassword ? (
-                                  <EyeOff className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <Eye className="h-4 w-4 text-gray-500" />
-                                )}
-                              </Button>
-                            </div>
-                          </FormControl>
-                          <FormMessage id="password-error" className="text-red-600 min-h-[24px] max-h-[40px] block w-full text-left overflow-hidden break-words whitespace-normal" role="alert" />
-                        </FormItem>
-                      </motion.div>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.7 }}
-                        className="w-full"
-                      >
-                        <FormItem className="w-full">
-                          <FormLabel className="text-base font-semibold text-gray-700 flex items-center gap-2">
-                            <Shield className="w-4 h-4 text-purple-600" />
-                            Подтвердите пароль
-                          </FormLabel>
-                          <FormControl>
-                            <div className="relative w-full">
-                              <Input
-                                type={showConfirmPassword ? "text" : "password"}
-                                placeholder="••••••••"
-                                className="h-12 text-base pl-4 pr-12 border-2 border-gray-200 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white w-full max-w-[480px] mx-auto"
-                                {...field}
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                              >
-                                {showConfirmPassword ? (
-                                  <EyeOff className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <Eye className="h-4 w-4 text-gray-500" />
-                                )}
-                              </Button>
-                            </div>
-                          </FormControl>
-                          <FormMessage id="confirmPassword-error" className="text-red-600 min-h-[24px] max-h-[40px] block w-full text-left overflow-hidden break-words whitespace-normal" role="alert" />
-                        </FormItem>
-                      </motion.div>
-                    )}
-                  />
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.8 }}
-                    className="pt-2"
-                  >
-                    <Button 
+          <input
+            type="password"
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition bg-white text-gray-900 placeholder-gray-400"
+            placeholder="Пароль"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            minLength={8}
+          />
+          <input
+            type="password"
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition bg-white text-gray-900 placeholder-gray-400"
+            placeholder="Повторите пароль"
+            value={confirm}
+            onChange={e => setConfirm(e.target.value)}
+            required
+            minLength={8}
+          />
+          {wasSubmitted && error && <div className="text-red-500 text-sm text-center">{error}</div>}
+          {wasSubmitted && password !== confirm && <div className="text-red-500 text-xs text-center">Пароли не совпадают</div>}
+          <button
                       type="submit" 
-                      className="w-full h-12 text-base font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white transition-all duration-200 transform hover:scale-[1.02] disabled:transform-none"
+            className="btn btn-primary w-full py-3 rounded-lg font-semibold text-lg bg-indigo-600 hover:bg-indigo-700 text-white transition disabled:opacity-60"
                       disabled={isLoading}
-                      size="lg"
-                    >
-                      {isLoading ? (
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Создание аккаунта...
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          Создать аккаунт
-                          <ArrowRight className="w-4 h-4" />
-                        </div>
-                      )}
-                    </Button>
-                  </motion.div>
+          >
+            {isLoading ? <Loader className="mx-auto" /> : 'Зарегистрироваться'}
+          </button>
                 </form>
-              </Form>
-
-              {/* Google OAuth Section */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9 }}
-                className="mt-6"
-              >
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500 font-medium">
-                      или зарегистрироваться через
-                    </span>
-                  </div>
+        <div className="flex justify-center w-full mt-4 text-sm">
+          <Link to="/login" className="text-gray-600 hover:underline">Уже есть аккаунт? Войти</Link>
                 </div>
-                
-                <div className="mt-4">
-                  {/* <GoogleOAuthButton 
-                    mode="signup" 
-                    disabled={isLoading}
-                  /> */}
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.0 }}
-                className="mt-6 text-center"
-              >
-                <p className="text-sm text-gray-600">
-                  Уже есть аккаунт?{' '}
-                  <Link 
-                    to="/login" 
-                    className="font-medium text-purple-600 hover:text-purple-700 transition-colors hover:underline"
-                  >
-                    Войти
-                  </Link>
-                </p>
-              </motion.div>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
-    </MainLayout>
+    </div>
   );
-};
-
-export default Signup;
+}

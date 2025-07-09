@@ -76,7 +76,7 @@ const Dashboard = () => {
     refetch 
   } = useQuery<UserSitesResponse>({
     queryKey: ['user-sites'],
-    queryFn: () => apiClient.getMySites(),
+    queryFn: () => apiClient.getUserSites(),
     enabled: !!user,
     refetchOnWindowFocus: false,
   });

@@ -338,51 +338,6 @@ async def delete_site(
             detail="Ошибка удаления сайта"
         )
 
-
-# STATISTICS ENDPOINT - DISABLED
-# @router.get("/{site_id}/statistics", response_model=SiteStatistics)
-# async def get_site_statistics(
-#     site_id: UUID,
-#     current_user: User = Depends(get_current_user),
-#     db: AsyncSession = Depends(get_db)
-# ):
-#     """
-#     Get site analytics and statistics
-#     
-#     Returns detailed analytics including:
-#     - View counts and unique visitors
-#     - Share statistics
-#     - Referrer data
-#     - Geographic information
-#     - Timeline data
-#     """
-#     try:
-#         stats = await sites_service.get_site_statistics(
-#             db=db,
-#             site_id=site_id,
-#             user_id=current_user.id
-#         )
-#         
-#         if not stats:
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="Сайт не найден"
-#             )
-#         
-#         return stats
-#         
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"Error getting site statistics: {e}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail="Ошибка получения статистики"
-#         )
-
-
-# Public endpoints (no authentication required)
-
 @router.get("/public/{slug}", response_class=HTMLResponse)
 async def view_public_site(
     slug: str,
@@ -408,24 +363,6 @@ async def view_public_site(
                 detail="Страница не найдена"
             )
         
-        # Record view analytics - DISABLED
-        # try:
-        #     analytics_event = SiteAnalyticsEvent(
-        #         event_type="view",
-        #         user_agent=request.headers.get("user-agent"),
-        #         referrer=request.headers.get("referer")
-        #     )
-        #     
-        #     await sites_service.record_analytics_event(
-        #         db=db,
-        #         site_id=site.id,
-        #         event=analytics_event,
-        #         ip_address=request.client.host if request.client else None
-        #     )
-        # except Exception as analytics_error:
-        #     logger.warning(f"Failed to record analytics: {analytics_error}")
-        #     # Continue serving the page even if analytics fails
-        
         return HTMLResponse(content=site.html_content)
         
     except HTTPException:
@@ -436,45 +373,3 @@ async def view_public_site(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка загрузки страницы"
         )
-
-
-# ANALYTICS ENDPOINTS - DISABLED
-# @router.post("/public/{slug}/analytics")
-# async def record_public_analytics(
-#     slug: str,
-#     event: SiteAnalyticsEvent,
-#     request: Request,
-#     db: AsyncSession = Depends(get_db)
-# ):
-#     """
-#     Record analytics event for public site
-#     
-#     Allows tracking user interactions:
-#     - Shares, clicks, form submissions
-#     - Custom events with metadata
-#     - Referrer and user agent data
-#     """
-#     try:
-#         site = await sites_service.get_site_by_slug(db=db, slug=slug)
-#         
-#         if not site:
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="Сайт не найден"
-#             )
-#         
-#         await sites_service.record_analytics_event(
-#             db=db,
-#             site_id=site.id,
-#             event=event,
-#             ip_address=request.client.host if request.client else None
-#         )
-#         
-#         return {"message": "Событие записано"}
-#         
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"Error recording analytics: {e}")
-#         # Don't raise error for analytics - return success
-#         return {"message": "Событие обработано"} 

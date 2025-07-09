@@ -1255,9 +1255,8 @@ export default COMPONENT_NAME;"""
 ВОЗВРАЩАЙ ТОЛЬКО JSON БЕЗ ОБЪЯСНЕНИЙ!"""
 
     def _create_react_user_prompt(self, request: SiteGenerationRequest) -> str:
-        """Create React-enhanced user prompt"""
+        """Create React-enhanced user prompt (shortened for speed)"""
         content_json = json.dumps(request.content_details, ensure_ascii=False, indent=2)
-        
         component_names = {
             'wedding': 'WeddingLanding',
             'birthday': 'BirthdayLanding', 
@@ -1265,9 +1264,7 @@ export default COMPONENT_NAME;"""
             'anniversary': 'AnniversaryLanding',
             'graduation': 'GraduationLanding'
         }
-        
         component_name = component_names.get(request.event_type, 'EventLanding')
-        
         react_colors = {
             'wedding': {
                 'hero_gradient': 'bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50',
@@ -1285,30 +1282,6 @@ export default COMPONENT_NAME;"""
                 'button_primary': 'bg-gradient-to-r from-blue-500 to-indigo-600',
                 'text_gradient': 'bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800'
             },
-            'corporate': {
-                'hero_gradient': 'bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50',
-                'mesh_overlay': 'bg-gradient-to-br from-slate-400/8 via-gray-400/12 to-zinc-400/8',
-                'glass_primary': 'bg-white/30 backdrop-blur-xl border border-white/40',
-                'glass_secondary': 'bg-slate-50/40 backdrop-blur-lg border border-slate-200/50',
-                'button_primary': 'bg-gradient-to-r from-slate-600 to-gray-700',
-                'text_gradient': 'bg-gradient-to-r from-slate-900 via-gray-800 to-zinc-800'
-            },
-            'anniversary': {
-                'hero_gradient': 'bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50',
-                'mesh_overlay': 'bg-gradient-to-br from-amber-400/10 via-yellow-400/15 to-orange-400/10',
-                'glass_primary': 'bg-white/20 backdrop-blur-xl border border-white/30',
-                'glass_secondary': 'bg-amber-50/30 backdrop-blur-lg border border-amber-200/40',
-                'button_primary': 'bg-gradient-to-r from-amber-500 to-orange-600',
-                'text_gradient': 'bg-gradient-to-r from-amber-900 via-orange-800 to-yellow-800'
-            },
-            'graduation': {
-                'hero_gradient': 'bg-gradient-to-br from-purple-50 via-indigo-50 to-pink-50',
-                'mesh_overlay': 'bg-gradient-to-br from-purple-400/10 via-indigo-400/15 to-pink-400/10',
-                'glass_primary': 'bg-white/20 backdrop-blur-xl border border-white/30',
-                'glass_secondary': 'bg-purple-50/30 backdrop-blur-lg border border-purple-200/40',
-                'button_primary': 'bg-gradient-to-r from-purple-500 to-indigo-600',
-                'text_gradient': 'bg-gradient-to-r from-purple-900 via-indigo-800 to-pink-800'
-            },
             'housewarming': {
                 'hero_gradient': 'bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50',
                 'mesh_overlay': 'bg-gradient-to-br from-emerald-400/10 via-green-400/15 to-teal-400/10',
@@ -1318,64 +1291,20 @@ export default COMPONENT_NAME;"""
                 'text_gradient': 'bg-gradient-to-r from-emerald-900 via-green-800 to-teal-800'
             }
         }
-        
         colors = react_colors.get(request.event_type, react_colors['birthday'])
-        
-        return f"""🎯 Создай React структуру для премиального лендинга!
+        return f"""Создай структуру React-лендинга для события типа {request.event_type} с темой {request.theme}.
 
-EVENT CONTEXT:
-🎪 Тип: {request.event_type}
-🎨 Тема: {request.theme}
-⚛️ Component: {component_name}
-👥 Аудитория: {request.target_audience or 'друзья и семья'}
+Требования:
+- Компонент: {component_name}
+- Цветовая палитра: {json.dumps(colors, ensure_ascii=False)}
+- Основные секции: hero, about, features, contact, footer
+- Используй современные подходы React и Tailwind CSS
+- Не добавляй подробные анимации, формы и сложную архитектуру
+- Верни только JSON-структуру сайта без объяснений
 
-REACT REQUIREMENTS:
-🔹 Component Name: {component_name}
-🔹 Color Palette: {json.dumps(colors, ensure_ascii=False)}
-
-EVENT DETAILS:
+Детали события:
 {content_json}
-
-STYLE PREFERENCES: {request.style_preferences or 'Modern premium React'}
-COLOR PREFERENCES: {request.color_preferences or 'согласно типу события'}
-
-🔥 СОЗДАЙ REACT СТРУКТУРУ С:
-
-⚛️ COMPONENT ARCHITECTURE:
-- TypeScript interfaces
-- Functional component structure
-- State management plan
-- Event handlers specification
-
-✨ HERO SECTION:
-- Gradient text заголовок
-- Glass morphism CTA button
-- Floating geometric shapes
-- Mesh gradient background
-
-🎨 ABOUT SECTION:
-- Glass morphism cards
-- Hover micro-interactions
-- State-driven animations
-
-📅 FEATURES SECTION:
-- Interactive grid layout
-- Modern card components
-- Hover effects
-
-📧 CONTACT SECTION:
-- Controlled form components
-- Form validation logic
-- Loading states
-- Success feedback
-
-🎭 THEME CONFIGURATION:
-- Tailwind color extensions
-- Custom animation keyframes
-- Responsive breakpoints
-- Glass effect utilities
-
-РЕЗУЛЬТАТ: Pixel-perfect React structure для Context7 component генерации!"""
+"""
 
     def _create_react_fallback_structure(self, request: SiteGenerationRequest) -> GeneratedReactSite:
         """Create React fallback structure when API fails"""
@@ -1411,30 +1340,6 @@ COLOR PREFERENCES: {request.color_preferences or 'согласно типу со
                 'glass_secondary': 'bg-blue-50/35 backdrop-blur-lg border border-blue-200/45',
                 'button_primary': 'bg-gradient-to-r from-blue-500 to-indigo-600',
                 'text_gradient': 'bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800'
-            },
-            'corporate': {
-                'hero_gradient': 'bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50',
-                'mesh_overlay': 'bg-gradient-to-br from-slate-400/8 via-gray-400/12 to-zinc-400/8',
-                'glass_primary': 'bg-white/30 backdrop-blur-xl border border-white/40',
-                'glass_secondary': 'bg-slate-50/40 backdrop-blur-lg border border-slate-200/50',
-                'button_primary': 'bg-gradient-to-r from-slate-600 to-gray-700',
-                'text_gradient': 'bg-gradient-to-r from-slate-900 via-gray-800 to-zinc-800'
-            },
-            'anniversary': {
-                'hero_gradient': 'bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50',
-                'mesh_overlay': 'bg-gradient-to-br from-amber-400/10 via-yellow-400/15 to-orange-400/10',
-                'glass_primary': 'bg-white/20 backdrop-blur-xl border border-white/30',
-                'glass_secondary': 'bg-amber-50/30 backdrop-blur-lg border border-amber-200/40',
-                'button_primary': 'bg-gradient-to-r from-amber-500 to-orange-600',
-                'text_gradient': 'bg-gradient-to-r from-amber-900 via-orange-800 to-yellow-800'
-            },
-            'graduation': {
-                'hero_gradient': 'bg-gradient-to-br from-purple-50 via-indigo-50 to-pink-50',
-                'mesh_overlay': 'bg-gradient-to-br from-purple-400/10 via-indigo-400/15 to-pink-400/10',
-                'glass_primary': 'bg-white/20 backdrop-blur-xl border border-white/30',
-                'glass_secondary': 'bg-purple-50/30 backdrop-blur-lg border border-purple-200/40',
-                'button_primary': 'bg-gradient-to-r from-purple-500 to-indigo-600',
-                'text_gradient': 'bg-gradient-to-r from-purple-900 via-indigo-800 to-pink-800'
             },
             'housewarming': {
                 'hero_gradient': 'bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50',
