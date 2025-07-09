@@ -6,7 +6,7 @@ from uuid import UUID
 import logging
 import json
 
-from ...dependencies.auth import get_current_user
+from ...dependencies.auth import get_current_user, get_user_from_token
 from ...users.models import User
 from ...db.db import get_db
 from ...schemas.sites import (
@@ -25,10 +25,25 @@ router = APIRouter()
 active_connections: dict[str, WebSocket] = {}
 
 @router.websocket("/generation-status/{generation_id}")
-async def websocket_generation_status(websocket: WebSocket, generation_id: str):
+async def websocket_generation_status(
+    websocket: WebSocket,
+    generation_id: str,
+    token: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db)
+):
     """
-    WebSocket endpoint для получения real-time статусов генерации сайта
+    WebSocket endpoint для получения real-time статусов генерации сайта.
+    Аутентификация происходит по токену в query параметрах.
     """
+    if not token:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing auth token")
+        return
+
+    user = await get_user_from_token(token, db)
+    if not user:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid auth token")
+        return
+
     await websocket.accept()
     active_connections[generation_id] = websocket
     
@@ -40,7 +55,7 @@ async def websocket_generation_status(websocket: WebSocket, generation_id: str):
     except WebSocketDisconnect:
         if generation_id in active_connections:
             del active_connections[generation_id]
-        logger.info(f"WebSocket disconnected for generation {generation_id}")
+        logger.info(f"WebSocket for user {user.id} disconnected for generation {generation_id}")
 
 async def send_generation_status(generation_id: str, status: GenerationStatus):
     """Отправка статуса генерации через WebSocket"""

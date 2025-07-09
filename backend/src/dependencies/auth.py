@@ -7,6 +7,7 @@ from src.users.models import User
 from src.db.db import get_db
 from src.core.security import verify_token
 import logging
+import jwt
 
 logger = logging.getLogger(__name__)
 
@@ -26,35 +27,72 @@ async def get_current_user(
     )
     
     try:
-        logger.warning(f"[AUTH DEBUG] Incoming token: {token}")
-        # Verify and decode JWT token
+        logger.debug(f"Attempting to validate token: {token[:30]}...")
         payload = verify_token(token)
         if payload is None:
-            logger.warning("Invalid token provided")
+            logger.warning("Token verification failed (payload is None).")
             raise credentials_exception
             
-        user_id = payload.get("sub")
-        if user_id is None:
-            logger.warning("Token missing user ID (sub)")
+        user_id_from_token = payload.get("sub")
+        logger.debug(f"Token subject (user_id): {user_id_from_token} (type: {type(user_id_from_token)})")
+        if user_id_from_token is None:
+            logger.warning("Token is missing user ID ('sub' claim).")
             raise credentials_exception
+
+        # The 'sub' from a JWT is a string. The database model expects a UUID.
+        # We must cast it to a string for the query.
+        user_id = str(user_id_from_token)
             
-        # Query user from database (string id)
+        # Query user from database
+        logger.debug(f"Querying database for user_id: {user_id}")
         stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)
         user = result.scalar_one_or_none()
         
         if user is None:
-            logger.warning(f"User not found for ID: {user_id}")
+            logger.warning(f"User not found in database for ID: {user_id}")
             raise credentials_exception
             
+        logger.debug(f"Successfully authenticated user: {user.email}")
         return user
         
-    except ValueError:
-        logger.warning("Invalid user ID format in token")
+    except (jwt.PyJWTError, ValueError) as e:
+        logger.warning(f"Token validation failed with error: {e}")
         raise credentials_exception
     except Exception as e:
-        logger.error(f"Authentication error: {str(e)}")
+        logger.error(f"An unexpected error occurred during authentication: {e}", exc_info=True)
         raise credentials_exception
+
+async def get_user_from_token(token: str, db: AsyncSession) -> Optional[User]:
+    """
+    Decodes a JWT token, and retrieves a user from the database.
+    This is used for authenticating WebSocket connections where the token is
+    passed as a query parameter.
+    Returns the user object or None if authentication fails.
+    """
+    if not token:
+        return None
+    try:
+        payload = verify_token(token)
+        if payload is None:
+            return None
+        
+        user_id_from_token = payload.get("sub")
+        if user_id_from_token is None:
+            return None
+
+        # The 'sub' from a JWT is a string. The database model expects a UUID.
+        # We must cast it to a string for the query.
+        user_id = str(user_id_from_token)
+
+        stmt = select(User).where(User.id == user_id)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+        return user
+    except Exception as e:
+        logger.error(f"Token validation failed for WebSocket: {e}")
+        return None
+
 
 async def get_current_active_user(
     current_user: User = Depends(get_current_user)

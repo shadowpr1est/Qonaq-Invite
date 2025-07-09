@@ -272,7 +272,14 @@ class ApiClient {
     
     // Create WebSocket connection for status updates
     if (onStatusUpdate) {
-      const wsUrl = `${this.baseURL.replace('http', 'ws')}/sites/generation-status/${generationId}`;
+      const token = this.getToken();
+      if (!token) {
+          console.error("No auth token found for WebSocket connection.");
+          // Optionally, reject the promise or handle the unauthenticated state
+          return Promise.reject(new Error("Authentication token is not available."));
+      }
+
+      const wsUrl = `${this.baseURL.replace(/^http/, 'ws')}/sites/generation-status/${generationId}?token=${token}`;
       const ws = new WebSocket(wsUrl);
       
       ws.onmessage = (event) => {
