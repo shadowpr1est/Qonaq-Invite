@@ -533,4 +533,86 @@ async def get_current_user_info(
         avatar=current_user.avatar,
         bio=current_user.bio,
         is_email_verified=current_user.is_email_verified
-    ) 
+    )
+
+
+@router.put("/profile", response_model=UserResponse)
+async def update_profile(
+    profile_data: dict,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update user profile"""
+    try:
+        user_service = UserService(db)
+        
+        # Update allowed fields
+        if 'name' in profile_data:
+            current_user.name = profile_data['name']
+        if 'bio' in profile_data:
+            current_user.bio = profile_data['bio']
+        
+        await db.commit()
+        await db.refresh(current_user)
+        
+        logger.info(f"Profile updated for user: {current_user.email}")
+        
+        return UserResponse(
+            id=str(current_user.id),
+            email=current_user.email,
+            name=current_user.name,
+            avatar=current_user.avatar,
+            bio=current_user.bio,
+            is_email_verified=current_user.is_email_verified
+        )
+        
+    except Exception as e:
+        logger.error(f"Profile update failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during profile update"
+        )
+
+
+@router.post("/change-password", response_model=dict)
+async def change_password(
+    password_data: dict,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Change user password"""
+    try:
+        user_service = UserService(db)
+        
+        current_password = password_data.get('current_password')
+        new_password = password_data.get('new_password')
+        
+        if not current_password or not new_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Both current_password and new_password are required"
+            )
+        
+        # Verify current password
+        if not user_service.verify_password(current_password, current_user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect"
+            )
+        
+        # Update password
+        current_user.hashed_password = user_service.get_password_hash(new_password)
+        await db.commit()
+        
+        logger.info(f"Password changed for user: {current_user.email}")
+        
+        return {"message": "Password successfully changed"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Password change failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during password change"
+        ) 

@@ -204,6 +204,49 @@ class ApiClient {
     return this.request('/auth/me');
   }
 
+  async updateProfile(data: { name: string; bio?: string }): Promise<{ data?: User; error?: ApiError }> {
+    try {
+      const user = await this.request('/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+      return { data: user };
+    } catch (error) {
+      return { error: { detail: error instanceof Error ? error.message : 'Ошибка обновления профиля' } };
+    }
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ data?: { message: string }; error?: ApiError }> {
+    try {
+      const result = await this.request('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+      });
+      return { data: result };
+    } catch (error) {
+      return { error: { detail: error instanceof Error ? error.message : 'Ошибка изменения пароля' } };
+    }
+  }
+
+  async getStats(): Promise<{ data?: any; error?: ApiError }> {
+    try {
+      // Заглушка для статистики - можно реализовать позже
+      const stats = {
+        total_analyses: 0,
+        completed_analyses: 0,
+        average_score: 0,
+        total_practice_time: 0,
+        current_streak: 0,
+        best_streak: 0,
+        improvement_rate: 0,
+        join_date: new Date().toISOString(),
+      };
+      return { data: stats };
+    } catch (error) {
+      return { error: { detail: error instanceof Error ? error.message : 'Ошибка загрузки статистики' } };
+    }
+  }
+
   // Site Generation Methods
   async generateSite(data: SiteGenerationRequest): Promise<GeneratedSite> {
     return this.request('/sites/generate', {
@@ -354,4 +397,7 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient(); 
+export const apiClient = new ApiClient();
+
+// Backward compatibility - alias для старого API
+export const userApi = apiClient; 
