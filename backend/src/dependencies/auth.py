@@ -26,6 +26,7 @@ async def get_current_user(
     )
     
     try:
+        logger.warning(f"[AUTH DEBUG] Incoming token: {token}")
         # Verify and decode JWT token
         payload = verify_token(token)
         if payload is None:
