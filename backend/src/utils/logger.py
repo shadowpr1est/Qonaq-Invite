@@ -14,10 +14,7 @@ def setup_logger(name: str) -> logging.Logger:
     
     if not logger.handlers:
         # Определяем уровень логирования
-        if settings.ENVIRONMENT == "development":
-            log_level = logging.DEBUG if settings.DEBUG else logging.INFO
-        else:
-            log_level = logging.WARNING
+        log_level = logging.DEBUG
         
         logger.setLevel(log_level)
         
@@ -26,16 +23,9 @@ def setup_logger(name: str) -> logging.Logger:
         handler.setLevel(log_level)
         
         # Форматирование
-        if settings.ENVIRONMENT == "production":
-            # Структурированные логи для продакшна
-            formatter = logging.Formatter(
-                '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}'
-            )
-        else:
-            # Читаемые логи для разработки
-            formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            )
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
         
         handler.setFormatter(formatter)
         logger.addHandler(handler)
