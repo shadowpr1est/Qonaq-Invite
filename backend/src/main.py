@@ -8,12 +8,12 @@ from src.core.config import settings
 from src.core.exceptions import setup_exception_handlers
 from src.api.v1 import auth, users, sites
 from src.db.db import init_db
+from src.utils.logger import setup_logging
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Настраиваем логирование при старте
+setup_logging()
+
+# Получаем логгер после настройки
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
