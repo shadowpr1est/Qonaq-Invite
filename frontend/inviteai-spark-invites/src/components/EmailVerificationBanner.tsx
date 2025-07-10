@@ -8,10 +8,10 @@ import {
   Mail, 
   AlertCircle, 
   CheckCircle, 
-  Loader2, 
   X,
   RefreshCw
 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 interface EmailVerificationBannerProps {
   onDismiss?: () => void;
@@ -86,8 +86,8 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
                         >
                           {isResending ? (
                             <>
-                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                          Отправка...
+                              <LoadingSpinner size="sm" className="w-3 h-3 mr-1 inline-block align-middle" />
+                              Отправка...
                             </>
                           ) : (
                             <>
