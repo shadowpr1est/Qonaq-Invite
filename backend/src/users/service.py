@@ -21,27 +21,20 @@ class UserService:
         """Generate a 6-digit verification code"""
         return f"{random.randint(100000, 999999):06d}"
     
-    async def create_user(self, user_data: UserCreate, send_verification: bool = True) -> User:
-        """Create new user with hashed password and email verification token"""
+    async def create_user(self, user_data: UserCreate, send_verification: bool = False) -> User:
+        """Create new user: email verification отключена, все пользователи сразу верифицированы, письма не отправляются."""
         hashed_password = get_password_hash(user_data.password)
-        verification_token = secrets.token_urlsafe(32) if send_verification else None
-        
-        # Generate 6-digit code with 15-minute expiration
-        verification_code = self._generate_6_digit_code() if send_verification else None
-        code_expires_at = datetime.utcnow() + timedelta(minutes=15) if send_verification else None
-        
         user = User(
             email=user_data.email,
             name=user_data.name,
             hashed_password=hashed_password,
             bio=None,
             avatar=None,
-            is_email_verified=not send_verification,  # True if not sending verification
-            email_verification_token=verification_token,
-            email_verification_code=verification_code,
-            email_verification_code_expires_at=code_expires_at
+            is_email_verified=True,  # Всегда верифицирован
+            email_verification_token=None,
+            email_verification_code=None,
+            email_verification_code_expires_at=None
         )
-        
         self.db.add(user)
         await self.db.commit()
         await self.db.refresh(user)

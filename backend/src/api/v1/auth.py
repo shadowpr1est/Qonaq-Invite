@@ -42,9 +42,7 @@ async def register(
         # Create user
         user = await user_service.create_user(user_data)
         
-        # Generate and send verification code
-        # verification_code = await user_service.generate_email_verification_code(user.email)
-        # await email_service.send_verification_code_email(user.email, user.name, verification_code)
+        # Email verification отключена: ничего не отправляем
         
         # Generate token pair
         access_token, refresh_token = create_token_pair(user.id)
@@ -246,8 +244,7 @@ async def verify_email_code(
                 detail="Invalid or expired verification code"
             )
         
-        # Send welcome email
-        await email_service.send_welcome_email(user.email, user.name)
+        # Email verification отключена: не отправляем welcome email
         
         logger.info(f"Email verified successfully with code for user: {user.email}")
         
