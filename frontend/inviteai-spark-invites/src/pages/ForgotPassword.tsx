@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AuthCanvasBackground from '../components/AuthCanvasBackground';
-import Loader from '../components/Loader';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { apiClient } from '@/lib/api';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -11,10 +12,14 @@ export default function ForgotPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await apiClient.forgotPassword({ email });
       setSent(true);
+    } catch {
+      // Можно добавить обработку ошибок
+    } finally {
       setLoading(false);
-    }, 1200);
+    }
   };
 
   return (
@@ -51,7 +56,7 @@ export default function ForgotPassword() {
               className="btn btn-primary w-full py-3 rounded-lg font-semibold text-lg bg-indigo-600 hover:bg-indigo-700 text-white transition disabled:opacity-60"
               disabled={loading}
             >
-              {loading ? <Loader className="mx-auto" /> : 'Восстановить'}
+              {loading ? <LoadingSpinner className="mx-auto" /> : 'Восстановить'}
             </button>
           </form>
         )}

@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/use-auth';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthCanvasBackground from '../components/AuthCanvasBackground';
 import Loader from '../components/Loader';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 export default function Signup() {
   const { signup, isLoading, error } = useAuth();
@@ -17,8 +18,7 @@ export default function Signup() {
     e.preventDefault();
     setWasSubmitted(true);
     if (password !== confirm) return;
-    const ok = await signup(name, email, password);
-    if (ok) navigate('/dashboard');
+    await signup({ name, email, password });
   };
 
     return (
@@ -80,7 +80,7 @@ export default function Signup() {
             className="btn btn-primary w-full py-3 rounded-lg font-semibold text-lg bg-indigo-600 hover:bg-indigo-700 text-white transition disabled:opacity-60"
                       disabled={isLoading}
           >
-            {isLoading ? <Loader className="mx-auto" /> : 'Зарегистрироваться'}
+            {isLoading ? <LoadingSpinner className="mx-auto" /> : 'Зарегистрироваться'}
           </button>
                 </form>
         <div className="flex justify-center w-full mt-4 text-sm">

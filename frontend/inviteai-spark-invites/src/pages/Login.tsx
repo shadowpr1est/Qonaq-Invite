@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/use-auth';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthCanvasBackground from '../components/AuthCanvasBackground';
 import Loader from '../components/Loader';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 export default function Login() {
   const { login, isLoading, error } = useAuth();
@@ -12,8 +13,7 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const ok = await login(email, password);
-    if (ok) navigate('/dashboard');
+    await login({ email, password });
   };
 
     return (
@@ -56,7 +56,7 @@ export default function Login() {
             className="btn btn-primary w-full py-3 rounded-lg font-semibold text-lg bg-indigo-600 hover:bg-indigo-700 text-white transition disabled:opacity-60"
                       disabled={isLoading}
           >
-            {isLoading ? <Loader className="mx-auto" /> : 'Войти'}
+            {isLoading ? <LoadingSpinner className="mx-auto" /> : 'Войти'}
           </button>
                 </form>
         <div className="flex justify-between w-full mt-4 text-sm">
