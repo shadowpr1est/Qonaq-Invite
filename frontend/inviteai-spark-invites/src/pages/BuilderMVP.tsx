@@ -232,51 +232,25 @@ const BuilderMVP = () => {
         setGenerationProgress(step.progress);
       }
 
-      // Новый маппинг тем и цветовых схем
-      const templateToThemeMap: Record<string, string> = {
-        'birthday-balloons': 'birthday',
-        'birthday-confetti': 'birthday',
-        'birthday-cake': 'birthday',
-        'birthday-party': 'birthday',
-        'birthday-elegant': 'birthday',
-        'wedding-classic': 'wedding',
-        'wedding-romantic': 'wedding',
-        'wedding-garden': 'wedding',
-        'wedding-modern': 'wedding',
-        'wedding-rustic': 'wedding',
-        'corp-professional': 'corporate',
-        'corp-modern': 'corporate',
-        'corp-creative': 'corporate',
-        'corp-tech': 'corporate',
-        'corp-elegant': 'corporate',
-        'house-cozy': 'housewarming',
-        'house-modern': 'housewarming',
-        'house-garden': 'housewarming',
-        'house-family': 'housewarming',
-        'house-minimalist': 'housewarming',
-        'baby-cute': 'anniversary',
-        'baby-pastel': 'anniversary',
-        'baby-toys': 'anniversary',
-        'baby-stars': 'anniversary',
-        'baby-nature': 'anniversary',
-        'grad-classic': 'graduation',
-        'grad-gold': 'graduation',
-        'grad-modern': 'graduation',
-        'grad-celebration': 'graduation',
-        'grad-success': 'graduation',
+      // Маппинг шаблонов и цветовых схем из UI на backend enum
+      const templateToTheme: Record<string, string> = {
+        'classic': 'classic',
+        'romantic': 'elegant',
+        'garden': 'rustic',
+        'modern': 'modern',
+        'rustic': 'rustic',
       };
-
-      const colorSchemeMap: Record<string, string> = {
-        'warm': 'anniversary',
-        'cool': 'corporate',
-        'elegant': 'wedding',
-        'vibrant': 'birthday',
-        'pastel': 'graduation',
+      const colorLabelToEnum: Record<string, string> = {
+        'warm': 'warm_autumn',
+        'cool': 'nature_inspired',
+        'elegant': 'elegant_neutrals',
+        'vibrant': 'vibrant_celebration',
+        'pastel': 'romantic_pastels',
       };
 
       const siteRequest = {
         event_type: data.event_type,
-        theme: templateToThemeMap[data.template_id] || data.event_type,
+        theme: templateToTheme[data.template_id] || 'classic',
         content_details: {
           event_title: data.event_title,
           event_date: data.event_date,
@@ -292,7 +266,7 @@ const BuilderMVP = () => {
           decorative_elements: data.decorative_elements?.join(',') || null,
           font_pair: data.font_pair || 'modern',
         },
-        color_preferences: colorSchemeMap[data.color_scheme || 'warm'] || data.event_type,
+        color_preferences: colorLabelToEnum[data.color_scheme] || 'elegant_neutrals',
         style_preferences: `Font: ${data.font_pair || 'modern'}, Template: ${data.template_id}`,
         target_audience: 'mixed',
       };

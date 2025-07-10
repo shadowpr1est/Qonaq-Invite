@@ -19,6 +19,7 @@ export default function Signup() {
     setWasSubmitted(true);
     if (password !== confirm) return;
     await signup({ name, email, password });
+    navigate('/dashboard');
   };
 
     return (
