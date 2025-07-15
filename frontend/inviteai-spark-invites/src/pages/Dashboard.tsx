@@ -35,6 +35,7 @@ import {
   GraduationCap,
   Home
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const eventIcons = {
   wedding: Heart,
@@ -67,6 +68,9 @@ const Dashboard = () => {
   const { user, isInitialized } = useAuth();
   
   const [selectedSite, setSelectedSite] = useState<string | null>(null);
+  const [statsSite, setStatsSite] = useState<SitePreview | null>(null);
+  const [siteStats, setSiteStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   // Получение списка сайтов пользователя
   const { 
@@ -120,6 +124,24 @@ const Dashboard = () => {
     const shareUrl = `${window.location.origin}/sites/public/${slug}`;
     navigator.clipboard.writeText(shareUrl);
     toast.success('Ссылка скопирована в буфер обмена');
+  };
+
+  const handleShowStats = async (site: SitePreview) => {
+    setStatsSite(site);
+    setStatsLoading(true);
+    try {
+      // Получаем только список гостей (RSVP)
+      const guests = await apiClient.request(`/sites/${site.id}/rsvp`);
+      setSiteStats({ guests });
+    } catch {
+      setSiteStats(null);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+  const handleCloseStats = () => {
+    setStatsSite(null);
+    setSiteStats(null);
   };
 
   if (!isInitialized) {
@@ -362,6 +384,16 @@ const Dashboard = () => {
                             <Button
                               size="sm"
                               variant="outline"
+                              onClick={() => handleShowStats(site)}
+                              className="flex items-center gap-2"
+                            >
+                              <BarChart3 className="w-4 h-4" />
+                              Статистика
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
                               onClick={() => handleDeleteSite(site.id, site.title)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
@@ -410,6 +442,29 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+
+      <Dialog open={!!statsSite} onOpenChange={handleCloseStats}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Статистика: {statsSite?.title}</DialogTitle>
+          </DialogHeader>
+          {statsLoading ? (
+            <div className="text-center py-8 text-gray-500">Загрузка...</div>
+          ) : siteStats ? (
+            <div className="space-y-2">
+              <div>Просмотры: <b>{siteStats.total_views ?? 0}</b></div>
+              <div>Гости:</div>
+              <ul className="pl-4">
+                {siteStats && siteStats.guests && siteStats.guests.length > 0 ? siteStats.guests.map((g: any, i: number) => (
+                  <li key={i}>{g.guest_name || 'Гость'} <span className="text-xs text-gray-500">({g.response})</span></li>
+                )) : <li className="text-gray-400">—</li>}
+              </ul>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">Нет данных</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

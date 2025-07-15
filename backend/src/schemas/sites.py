@@ -83,7 +83,7 @@ class SiteGenerationResponse(BaseModel):
 
 class SitePreview(BaseModel):
     """Schema for site preview (without full HTML content)"""
-    model_config = ConfigDict(from_attributes=True)
+    # model_config = ConfigDict(from_attributes=True)
     
     id: UUID
     title: str
@@ -145,3 +145,22 @@ class UserSitesResponse(BaseModel):
     total_count: int
     published_count: int
     draft_count: int 
+
+
+class RSVPCreate(BaseModel):
+    guest_name: Optional[str] = None
+    guest_email: Optional[str] = None
+    response: str
+    comment: Optional[str] = None
+
+class RSVPResponse(BaseModel):
+    id: UUID
+    site_id: UUID
+    guest_name: Optional[str] = None
+    guest_email: Optional[str] = None
+    response: str
+    comment: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True 

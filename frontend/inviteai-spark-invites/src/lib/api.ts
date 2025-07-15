@@ -346,10 +346,6 @@ class ApiClient {
   }
 
   // Analytics Methods
-  async getSiteStatistics(siteId: string): Promise<SiteStatistics> {
-    return this.request(`/sites/${siteId}/analytics`);
-  }
-
   async trackEvent(data: AnalyticsEvent): Promise<{ success: boolean }> {
     return this.request('/analytics/track', {
       method: 'POST',
@@ -370,6 +366,14 @@ class ApiClient {
   async incrementSiteView(siteId: string): Promise<{ success: boolean }> {
     return this.request(`/public/sites/${siteId}/view`, {
       method: 'POST',
+    }, false);
+  }
+
+  // RSVP
+  async sendRSVP(siteId: string, data: { guest_name?: string; guest_email?: string; response: string; comment?: string }): Promise<any> {
+    return this.request(`/sites/${siteId}/rsvp`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     }, false);
   }
 

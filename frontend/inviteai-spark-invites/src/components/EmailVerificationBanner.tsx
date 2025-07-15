@@ -87,7 +87,7 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
                           {isResending ? (
                             <>
                               <LoadingSpinner size="sm" className="w-3 h-3 mr-1 inline-block align-middle" />
-                              Отправка...
+                          Отправка...
                             </>
                           ) : (
                             <>

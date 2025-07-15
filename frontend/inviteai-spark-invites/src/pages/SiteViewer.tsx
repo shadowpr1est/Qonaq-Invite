@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
 import type { GeneratedSite } from '@/lib/types';
 import { generateContext7Preview } from '@/lib/context7Preview';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, ExternalLink, Share2, Edit, MessageCircle, Send, Sparkles, Smartphone, Monitor, Zap, Calendar, MapPin, User } from 'lucide-react';
 import LivePreviewFrame from '@/components/LivePreviewFrame';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const SiteViewer = () => {
   const { siteId } = useParams<{ siteId: string }>();
@@ -42,6 +44,14 @@ const SiteViewer = () => {
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isProcessingChat, setIsProcessingChat] = useState(false);
+
+  const [showRSVPDialog, setShowRSVPDialog] = useState(false);
+  const [rsvpName, setRSVPName] = useState('');
+  const [rsvpWish, setRSVPWish] = useState('');
+  const [rsvpSubmitted, setRSVPSubmitted] = useState(false);
+  const [selectedRSVPOption, setSelectedRSVPOption] = useState<string>('');
+
+  const { trackUserAction } = useAnalytics();
 
   // Получение данных сайта
   const { 
@@ -177,6 +187,35 @@ const SiteViewer = () => {
        });
        
      }, 250); // Задержка < 300ms для "мгновенного" обновления
+  };
+
+  // RSVP обработчик (эмулируем, интеграция с API по желанию)
+  const handleRSVPClick = (option: string) => {
+    setSelectedRSVPOption(option);
+    setShowRSVPDialog(true);
+  };
+  const handleRSVPSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!siteId) return;
+    try {
+      await apiClient.sendRSVP(siteId, {
+        guest_name: rsvpName,
+        response: selectedRSVPOption,
+        comment: rsvpWish
+      });
+      trackUserAction('rsvp', 'engagement', { response: selectedRSVPOption, guest_name: rsvpName });
+      setRSVPSubmitted(true);
+      setTimeout(() => {
+        setShowRSVPDialog(false);
+        setRSVPSubmitted(false);
+        setRSVPName('');
+        setRSVPWish('');
+        setSelectedRSVPOption('');
+        toast.success('Спасибо за ваш ответ!');
+      }, 1200);
+    } catch (error) {
+      toast.error('Ошибка при отправке RSVP. Попробуйте еще раз.');
+    }
   };
 
   if (isLoading) {
@@ -417,6 +456,53 @@ const SiteViewer = () => {
           />
         </div>
       )}
+      {site?.content_details?.rsvp_enabled && (
+        <div className="flex flex-col items-center gap-3 mt-6">
+          <h3 className="text-xl font-semibold mb-2">Вы присоединитесь к нам?</h3>
+          <div className="flex gap-3">
+            {site.content_details.rsvp_options?.map((option: string) => (
+              <Button
+                key={option}
+                className="px-6 py-3 text-base font-medium rounded-xl shadow-md gradient-bg"
+                onClick={() => handleRSVPClick(option)}
+              >
+                {option}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+      <Dialog open={showRSVPDialog} onOpenChange={setShowRSVPDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Подтвердите участие</DialogTitle>
+          </DialogHeader>
+          {rsvpSubmitted ? (
+            <div className="text-center py-8 text-green-600 font-semibold text-lg">Спасибо, ваш ответ записан!</div>
+          ) : (
+            <form onSubmit={handleRSVPSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Ваше имя <span className="text-red-500">*</span></label>
+                <Input
+                  value={rsvpName}
+                  onChange={e => setRSVPName(e.target.value)}
+                  placeholder="Введите имя"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Пожелание (необязательно)</label>
+                <Input
+                  value={rsvpWish}
+                  onChange={e => setRSVPWish(e.target.value)}
+                  placeholder="Можете оставить пожелание..."
+                />
+              </div>
+              <Button type="submit" className="w-full mt-2">{selectedRSVPOption ? `Отправить (${selectedRSVPOption})` : 'Отправить'}</Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

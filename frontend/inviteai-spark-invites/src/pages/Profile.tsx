@@ -7,6 +7,7 @@ import * as z from 'zod';
 
 import { useAuth } from '@/hooks/use-auth';
 import { userApi } from '@/lib/api';
+import { apiClient } from '@/lib/api';
 
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -68,6 +69,14 @@ interface UserStats {
   join_date: string;
 }
 
+interface SiteAnalytics {
+  site_id: string;
+  title: string;
+  views: number;
+  rsvp_stats: Record<string, number>;
+  guests: { name: string; response: string; created_at: string }[];
+}
+
 const Profile = () => {
   const navigate = useNavigate();
   const { user, isInitialized } = useAuth();
@@ -77,6 +86,8 @@ const Profile = () => {
   const [statsLoading, setStatsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [siteAnalytics, setSiteAnalytics] = useState<SiteAnalytics[]>([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   // Формы
   const profileForm = useForm<ProfileFormData>({
@@ -229,9 +240,10 @@ const Profile = () => {
           )}
 
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="profile">Профиль</TabsTrigger>
               <TabsTrigger value="stats">Статистика</TabsTrigger>
+              <TabsTrigger value="analytics">Аналитика</TabsTrigger>
               <TabsTrigger value="security">Безопасность</TabsTrigger>
             </TabsList>
 
@@ -495,6 +507,52 @@ const Profile = () => {
                     </CardContent>
                   </Card>
                 )}
+              </motion.div>
+            </TabsContent>
+
+            {/* Вкладка аналитики */}
+            <TabsContent value="analytics">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Аналитика приглашений</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analyticsLoading ? (
+                      <div className="text-center py-8 text-gray-500">Загрузка аналитики...</div>
+                    ) : siteAnalytics.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">Нет данных по приглашениям</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm border">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="px-3 py-2 border">Событие</th>
+                              <th className="px-3 py-2 border">Просмотры</th>
+                              <th className="px-3 py-2 border">Гости</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {siteAnalytics.map(site => (
+                              <tr key={site.site_id} className="border-b">
+                                <td className="px-3 py-2 border font-semibold">{site.title}</td>
+                                <td className="px-3 py-2 border text-center">{site.views}</td>
+                                <td className="px-3 py-2 border">
+                                  <div>Гости:</div>
+                                  <ul className="pl-4">
+                                    {siteAnalytics && siteAnalytics.guests && siteAnalytics.guests.length > 0 ? siteAnalytics.guests.map((g: any, i: number) => (
+                                      <li key={i}>{g.guest_name || 'Гость'} <span className="text-xs text-gray-500">({g.response})</span></li>
+                                    )) : <li className="text-gray-400">—</li>}
+                                  </ul>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </motion.div>
             </TabsContent>
 

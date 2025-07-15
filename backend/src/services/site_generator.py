@@ -1,1409 +1,1064 @@
 import json
-import logging
-from typing import Dict, Any, Optional, List, Callable
+import uuid
+import calendar
+from typing import List, Dict, Any, Optional
 from datetime import datetime
-
-from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
-
+from openai import AsyncOpenAI
+from babel.dates import format_date, format_datetime  # Добавлено для локализации дат
 from ..core.config import settings
+from ..utils.slug import generate_slug
 
-logger = logging.getLogger(__name__)
+# --- Pydantic Schemas ---
+class EventData(BaseModel):
+    event_type: str
+    theme: Optional[str] = "modern"
+    color_preferences: Optional[str] = "elegant_neutrals"
+    content_details: Dict[str, Any]
 
-# Type alias для callback функции обновления статуса (согласно FastAPI best practices)
-StatusCallback = Callable[[str, int, str, Optional[int]], None]
+# --- Constants ---
+COLOR_GRADIENTS = {
+    "elegant_neutrals": {
+        "primary": "from-slate-600 via-gray-700 to-slate-800",
+        "secondary": "from-gray-100 to-gray-200",
+        "accent": "text-slate-700",
+        "background": "bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100"
+    },
+    "cool_winter": {
+        "primary": "from-blue-600 via-indigo-600 to-cyan-600",
+        "secondary": "from-blue-50 to-indigo-50",
+        "accent": "text-blue-700",
+        "background": "bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50"
+    },
+    "nature_inspired": {
+        "primary": "from-green-600 via-emerald-600 to-teal-600",
+        "secondary": "from-green-50 to-emerald-50",
+        "accent": "text-green-700",
+        "background": "bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50"
+    },
+    "romantic_pastels": {
+        "primary": "from-pink-500 via-rose-500 to-red-500",
+        "secondary": "from-pink-50 to-rose-50",
+        "accent": "text-pink-700",
+        "background": "bg-gradient-to-br from-pink-50 via-rose-50 to-red-50"
+    },
+    "warm_autumn": {
+        "primary": "from-orange-600 via-amber-600 to-red-600",
+        "secondary": "from-orange-50 to-amber-50",
+        "accent": "text-orange-700",
+        "background": "bg-gradient-to-br from-orange-50 via-amber-50 to-red-50"
+    },
+    "vibrant_celebration": {
+        "primary": "from-purple-600 via-pink-600 to-red-600",
+        "secondary": "from-purple-50 to-pink-50",
+        "accent": "text-purple-700",
+        "background": "bg-gradient-to-br from-purple-50 via-pink-50 to-red-50"
+    },
+    "spring_fresh": {
+        "primary": "from-lime-600 via-green-600 to-emerald-600",
+        "secondary": "from-lime-50 to-green-50",
+        "accent": "text-lime-700",
+        "background": "bg-gradient-to-br from-lime-50 via-green-50 to-emerald-50"
+    },
+    "summer_bright": {
+        "primary": "from-yellow-500 via-orange-500 to-red-500",
+        "secondary": "from-yellow-50 to-orange-50",
+        "accent": "text-yellow-700",
+        "background": "bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50"
+    }
+}
 
+THEME_STYLES = {
+    "modern": {
+        "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+        "card": "bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20",
+        "title": "text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight",
+        "description": "text-xl sm:text-2xl md:text-3xl font-light leading-relaxed",
+        "button": "px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl",
+        "spacing": "p-8 sm:p-10 md:p-12"
+    },
+    "classic": {
+        "container": "max-w-5xl mx-auto px-4 sm:px-6 lg:px-8",
+        "card": "bg-white/95 backdrop-blur-sm border-2 border-gray-200 shadow-lg",
+        "title": "text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-bold",
+        "description": "text-lg sm:text-xl md:text-2xl font-serif leading-relaxed",
+        "button": "px-6 py-3 border-2 border-gray-300 font-serif font-semibold transition-all duration-200 hover:shadow-md",
+        "spacing": "p-6 sm:p-8 md:p-10"
+    },
+    "minimalist": {
+        "container": "max-w-4xl mx-auto px-4 sm:px-6 lg:px-8",
+        "card": "bg-white/70 backdrop-blur-sm rounded-lg shadow-sm border border-gray-100",
+        "title": "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-wide",
+        "description": "text-base sm:text-lg md:text-xl font-light leading-relaxed",
+        "button": "px-6 py-3 rounded-md font-light transition-all duration-200 hover:shadow-sm",
+        "spacing": "p-6 sm:p-7 md:p-8"
+    },
+    "elegant": {
+        "container": "max-w-6xl mx-auto px-4 sm:px-6 lg:px-8",
+        "card": "bg-white/85 backdrop-blur-md rounded-3xl shadow-xl border border-gray-100",
+        "title": "text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight",
+        "description": "text-lg sm:text-xl md:text-2xl font-medium leading-relaxed",
+        "button": "px-7 py-4 rounded-2xl font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105",
+        "spacing": "p-8 sm:p-9 md:p-10"
+    },
+    "playful": {
+        "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+        "card": "bg-white/80 backdrop-blur-sm rounded-full shadow-2xl border-4 border-white/30",
+        "title": "text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight",
+        "description": "text-lg sm:text-xl md:text-2xl leading-relaxed",
+        "button": "px-8 py-4 rounded-full font-bold text-lg transition-all duration-300 hover:scale-110 hover:rotate-2",
+        "spacing": "p-8 sm:p-10 md:p-12"
+    },
+    "rustic": {
+        "container": "max-w-5xl mx-auto px-4 sm:px-6 lg:px-8",
+        "card": "bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border-2 border-amber-200",
+        "title": "text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold",
+        "description": "text-lg sm:text-xl md:text-2xl leading-relaxed",
+        "button": "px-6 py-4 rounded-lg font-bold border-2 border-amber-300 transition-all duration-200 hover:shadow-md",
+        "spacing": "p-6 sm:p-8 md:p-10"
+    }
+}
 
-class GenerationStatus(BaseModel):
-    """Статус генерации сайта - структурированный ответ для API"""
-    step: str = Field(..., description="Текущий этап")
-    progress: int = Field(..., description="Прогресс в процентах 0-100") 
-    message: str = Field(..., description="Сообщение о текущем действии")
-    estimated_time: Optional[int] = Field(None, description="Оставшееся время в секундах")
-
-
-class GeneratedReactSite(BaseModel):
-    """Structured output for generated React site - optimized for modern React development"""
-    title: str = Field(..., description="Site title")
-    meta_description: str = Field(..., description="Meta description for SEO")
-    component_name: str = Field(..., description="Main React component name")
-    hero_section: Optional[Dict[str, Any]] = Field(default=None, description="Hero section content and props")
-    about_section: Optional[Dict[str, Any]] = Field(default=None, description="About section content and props")
-    features_section: Optional[Dict[str, Any]] = Field(default=None, description="Features/services section")
-    gallery_section: Optional[Dict[str, Any]] = Field(default=None, description="Gallery/showcase section")
-    contact_section: Optional[Dict[str, Any]] = Field(default=None, description="Contact form section")
-    footer_section: Optional[Dict[str, Any]] = Field(default=None, description="Footer content")
-    color_palette: Dict[str, str] = Field(..., description="Tailwind color palette")
-    theme_config: Dict[str, Any] = Field(..., description="Theme configuration for Tailwind")
-    animations: List[str] = Field(default_factory=list, description="Animation classes and effects")
-    custom_hooks: Optional[List[str]] = Field(default=None, description="Custom React hooks needed")
-    dependencies: List[str] = Field(default_factory=list, description="Required npm dependencies")
-    # User preferences for smart styling
-    event_type: Optional[str] = Field(default=None, description="Event type from user")
-    color_preferences: Optional[str] = Field(default=None, description="User color preferences")
-    style_preferences: Optional[str] = Field(default=None, description="User style preferences")
-    theme: Optional[str] = Field(default=None, description="Theme style preference")
-    # CRITICAL: User content data
-    content_details: Optional[Dict[str, Any]] = Field(default=None, description="User event details and content")
-
-
-class SiteGenerationRequest(BaseModel):
-    """Input parameters for site generation"""
-    event_type: str = Field(..., description="Type of event (wedding, birthday, etc.)")
-    theme: str = Field(..., description="Visual theme or style")
-    color_preferences: Optional[str] = Field(None, description="Preferred colors")
-    content_details: Dict[str, Any] = Field(..., description="Event details and content")
-    style_preferences: Optional[str] = Field(None, description="Additional style preferences")
-    target_audience: Optional[str] = Field(None, description="Target audience description")
-
+# --- System Prompt ---
+SYSTEM_PROMPT = """You are an expert React component generator for event invitations.
+Generate modern, responsive, and accessible React components using only Tailwind CSS.
+Follow these strict requirements:
+- Output ONLY the JSX component code, no explanations
+- Use semantic HTML elements
+- Implement smooth animations and transitions
+- Ensure mobile-first responsive design
+- Use the provided color scheme and theme consistently
+- Include proper accessibility attributes
+- Never include imports, exports, or function declarations
+- Make components interactive and engaging"""
 
 class SiteGeneratorService:
-    """OpenAI-powered React site generation service with Tailwind CSS expertise"""
-    
     def __init__(self):
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = "gpt-4o"
     
-    async def generate_react_site_structure(
-        self, 
-        request: SiteGenerationRequest, 
-        status_callback: StatusCallback = None
-    ) -> GeneratedReactSite:
-        """Generate complete React site structure using OpenAI - FIXED VERSION"""
-        try:
-            logger.info(f"🚀 Starting OpenAI generation for event: {request.event_type}, theme: {request.theme}")
-            logger.info(f"🎨 Color preferences: {request.color_preferences}")
-            logger.info(f"🎭 Style preferences: {request.style_preferences}")
-            
-            system_prompt = self._create_react_system_prompt()
-            user_prompt = self._create_react_user_prompt(request)
-            
-            # Test OpenAI connection first
+    def _get_color_scheme(self, color_preference: str) -> Dict[str, str]:
+        """Получает цветовую схему по предпочтению пользователя"""
+        return COLOR_GRADIENTS.get(color_preference, COLOR_GRADIENTS["elegant_neutrals"])
+    
+    def _get_theme_styles(self, theme: str) -> Dict[str, str]:
+        """Получает стили темы по предпочтению пользователя"""
+        return THEME_STYLES.get(theme, THEME_STYLES["modern"])
+    
+    def _generate_calendar_html(self, event_date: datetime, colors: Dict[str, str]) -> str:
+        """Генерирует HTML календаря с правильными цветами и русской локализацией"""
+        if not event_date:
+            return ""
+        
+        event_day = event_date.day
+        # Локализуем месяц на русский
+        event_month = format_date(event_date, 'LLLL', locale='ru').capitalize()
+        event_year = event_date.year
+        first_day = event_date.replace(day=1)
+        days_in_month = calendar.monthrange(event_year, event_date.month)[1]
+        starting_day_of_week = (first_day.weekday() + 1) % 7
+        
+        calendar_html = f"""
+        <div class="text-center mb-6">
+            <h4 class="text-xl font-bold {colors['accent']} mb-4">{event_month} {event_year}</h4>
+            <div class="grid grid-cols-7 gap-1 mb-2 text-xs font-medium text-gray-500">
+                <div class="py-2">Вс</div><div class="py-2">Пн</div><div class="py-2">Вт</div>
+                <div class="py-2">Ср</div><div class="py-2">Чт</div><div class="py-2">Пт</div><div class="py-2">Сб</div>
+            </div>
+        """
+        
+        day_counter = 1
+        for week in range(6):
+            calendar_html += '<div class="grid grid-cols-7 gap-1 mb-1">'
+            for day in range(7):
+                if week == 0 and day < starting_day_of_week:
+                    calendar_html += '<div class="h-10 w-10"></div>'
+                elif day_counter <= days_in_month:
+                    is_event_day = day_counter == event_day
+                    if is_event_day:
+                        calendar_html += f'<div class="h-10 w-10 flex items-center justify-center text-sm rounded-full bg-gradient-to-r {colors["primary"]} text-white font-bold shadow-lg transform scale-110 ring-2 ring-white ring-opacity-50">{day_counter}</div>'
+                    else:
+                        calendar_html += f'<div class="h-10 w-10 flex items-center justify-center text-sm rounded-full text-gray-600 hover:bg-gray-100 cursor-pointer transition-colors">{day_counter}</div>'
+                    day_counter += 1
+                else:
+                    calendar_html += '<div class="h-10 w-10"></div>'
+            calendar_html += '</div>'
+            if day_counter > days_in_month:
+                break
+        
+        calendar_html += '</div>'
+        return calendar_html
+    
+    def _generate_rsvp_section(self, data: Dict[str, Any], colors: Dict[str, str], theme_styles: Dict[str, str], site_id: str = None) -> str:
+        # Автоматически включаем RSVP, если есть опции, но нет флага
+        if 'rsvp_options' in data and not data.get('rsvp_enabled'):
+            data['rsvp_enabled'] = True
+        # Подробный лог для отладки
+        if any('rsvp' in k for k in data.keys()):
+            print(f"[RSVP-DEBUG] content_details: {data}")
+        print(f"[RSVP] site_id={site_id} rsvp_enabled={data.get('rsvp_enabled')} rsvp_options={data.get('rsvp_options')}")
+        if not data.get('rsvp_enabled'):
+            print(f"[RSVP] rsvp_enabled is False, returning empty string. content_details: {data}")
+            return ""
+        rsvp_options = data.get('rsvp_options', ['Буду', 'Не смогу'])
+        # Корректный site_id для endpoint
+        site_id_attr = f'data-site-id="{site_id}"' if site_id else ''
+        # Кнопки RSVP
+        buttons_html = "<div id=\"rsvp-options\" class=\"grid gap-4 max-w-md mx-auto\">"
+        for i, option in enumerate(rsvp_options):
+            button_class = f"bg-gradient-to-r {colors['primary']} text-white hover:shadow-lg" if i == 0 else f"bg-white border-2 border-gray-200 {colors['accent']} hover:bg-gray-50"
+            buttons_html += f'<button type="button" class="{theme_styles["button"]} {button_class} w-full" data-rsvp-option="{option}">{option}</button>'
+        buttons_html += "</div>"
+        # Форма RSVP (скрыта по умолчанию)
+        form_html = (
+            f'<form id="rsvp-form" class="space-y-4 max-w-md mx-auto mt-6 hidden">'
+            f'<input type="hidden" name="rsvp_option" id="rsvp_option_input" />'
+            f'<div>'
+            f'<label for="rsvp_name" class="block text-sm font-medium mb-1">Ваше имя <span class="text-red-500">*</span></label>'
+            f'<input id="rsvp_name" name="rsvp_name" type="text" required class="w-full border rounded-lg p-3" placeholder="Введите имя" />'
+            f'</div>'
+            f'<div>'
+            f'<label for="rsvp_comment" class="block text-sm font-medium mb-1">Комментарий (необязательно)</label>'
+            f'<textarea id="rsvp_comment" name="rsvp_comment" class="w-full border rounded-lg p-3" rows="2" placeholder="Пожелание или комментарий..."></textarea>'
+            f'</div>'
+            f'<button type="submit" class="w-full {theme_styles["button"]} bg-gradient-to-r {colors["primary"]} text-white font-semibold">Подтвердить</button>'
+            f'</form>'
+            f'<div id="rsvp-success" class="hidden text-center text-green-600 font-semibold mt-6">Спасибо, ваш ответ записан!</div>'
+            f'<div id="rsvp-error" class="hidden text-center text-red-600 font-semibold mt-4">Ошибка при отправке RSVP. Попробуйте еще раз.</div>'
+        )
+        rsvp_html = (
+            f'<div id="rsvp-root" {site_id_attr} class="{theme_styles["card"]} {theme_styles["spacing"]} max-w-2xl mx-auto mb-8 fade-in">'
+            f'<h3 class="text-2xl md:text-3xl font-bold {colors["accent"]} mb-6 text-center">Подтвердите участие</h3>'
+            f'{buttons_html}'
+            f'{form_html}'
+            f'</div>'
+            f'<script>(function() {{\n'
+            f'  try {{\n'
+            f'    var rsvpRoot = document.getElementById("rsvp-root");\n'
+            f'    if (!rsvpRoot) throw new Error("RSVP root not found");\n'
+            f'    var siteId = rsvpRoot.getAttribute("data-site-id");\n'
+            f'    if (!siteId) throw new Error("siteId not found");\n'
+            f'    var rsvpOptions = document.querySelectorAll("#rsvp-options button");\n'
+            f'    var rsvpForm = document.getElementById("rsvp-form");\n'
+            f'    var rsvpOptionInput = document.getElementById("rsvp_option_input");\n'
+            f'    var rsvpSuccess = document.getElementById("rsvp-success");\n'
+            f'    var rsvpError = document.getElementById("rsvp-error");\n'
+            f'    rsvpOptions.forEach(function(btn) {{\n'
+            f'      btn.addEventListener("click", function() {{\n'
+            f'        document.getElementById("rsvp-options").classList.add("hidden");\n'
+            f'        rsvpForm.classList.remove("hidden");\n'
+            f'        rsvpOptionInput.value = this.getAttribute("data-rsvp-option");\n'
+            f'      }});\n'
+            f'    }});\n'
+            f'    rsvpForm.addEventListener("submit", async function(e) {{\n'
+            f'      e.preventDefault();\n'
+            f'      var name = document.getElementById("rsvp_name").value.trim();\n'
+            f'      var comment = document.getElementById("rsvp_comment").value.trim();\n'
+            f'      var option = rsvpOptionInput.value;\n'
+            f'      if (!name) {{\n'
+            f'        document.getElementById("rsvp_name").focus();\n'
+            f'        return;\n'
+            f'      }}\n'
+            f'      try {{\n'
+            f'        rsvpError.classList.add("hidden");\n'
+            f'        var resp = await fetch(`/sites/${{siteId}}/rsvp`, {{\n'
+            f'          method: "POST",\n'
+            f'          headers: {{ "Content-Type": "application/json" }},\n'
+            f'          body: JSON.stringify({{ guest_name: name, response: option, comment }})\n'
+            f'        }});\n'
+            f'        if (!resp.ok) {{\n'
+            f'          var errText = "Ошибка: " + (await resp.text());\n'
+            f'          rsvpError.textContent = errText;\n'
+            f'          rsvpError.classList.remove("hidden");\n'
+            f'          return;\n'
+            f'        }}\n'
+            f'        rsvpForm.classList.add("hidden");\n'
+            f'        rsvpSuccess.classList.remove("hidden");\n'
+            f'        rsvpError.classList.add("hidden");\n'
+            f'      }} catch (err) {{\n'
+            f'        rsvpError.textContent = "Ошибка отправки RSVP: " + err.message;\n'
+            f'        rsvpError.classList.remove("hidden");\n'
+            f'      }}\n'
+            f'    }});\n'
+            f'  }} catch (err) {{\n'
+            f'    var rsvpRoot = document.getElementById("rsvp-root");\n'
+            f'    if (rsvpRoot) {{\n'
+            f'      var errDiv = document.createElement("div");\n'
+            f'      errDiv.className = "text-red-600 font-bold text-center mt-4";\n'
+            f'      errDiv.textContent = "Ошибка инициализации RSVP: " + err.message;\n'
+            f'      rsvpRoot.appendChild(errDiv);\n'
+            f'    }}\n'
+            f'  }}\n'
+            f'}})();</script>'
+        )
+        print(f"[RSVP] rsvp_html preview: {rsvp_html[:300]} ...")
+        return rsvp_html
+    
+    def _generate_contact_section(self, data: Dict[str, Any], colors: Dict[str, str], theme_styles: Dict[str, str]) -> str:
+        """Генерирует секцию контактов"""
+        if not any([data.get('contact_name'), data.get('contact_phone'), data.get('contact_email')]):
+            return ""
+        
+        contact_items = []
+        
+        if data.get('contact_name'):
+            contact_items.append(f'<p class="font-semibold {colors["accent"]}">{data["contact_name"]}</p>')
+        
+        if data.get('contact_phone'):
+            contact_items.append(f"""
+            <a href="tel:{data['contact_phone']}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                </svg>
+                {data['contact_phone']}
+            </a>
+            """)
+        
+        if data.get('contact_email'):
+            contact_items.append(f"""
+            <a href="mailto:{data['contact_email']}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+                {data['contact_email']}
+            </a>
+            """)
+        
+        return f"""
+        <div class="{theme_styles['card']} {theme_styles['spacing']} max-w-md mx-auto fade-in">
+            <h3 class="text-xl font-bold {colors['accent']} mb-6 text-center">
+                Вопросы?
+            </h3>
+            <div class="space-y-4 text-center">
+                {''.join(contact_items)}
+            </div>
+        </div>
+        """
+    
+    async def generate_react_component(self, event_json: dict) -> str:
+        """Генерирует React компонент с учетом всех пользовательских предпочтений"""
+        event = EventData.parse_obj(event_json)
+        
+        # Получаем цветовую схему и стили темы
+        colors = self._get_color_scheme(event.color_preferences)
+        theme_styles = self._get_theme_styles(event.theme)
+        
+        # Подготавливаем данные для промпта
+        enhanced_data = {
+            **event.content_details,
+            "color_scheme": colors,
+            "theme_styles": theme_styles,
+            "theme": event.theme,
+            "color_preferences": event.color_preferences
+        }
+        
+        prompt = f"""
+        Generate a responsive React invitation component using this data:
+        
+        {json.dumps(enhanced_data, ensure_ascii=False, indent=2)}
+        
+        Style Requirements:
+        - Use theme: {event.theme}
+        - Use color scheme: {event.color_preferences}
+        - Primary gradient: {colors['primary']}
+        - Background: {colors['background']}
+        - Accent color: {colors['accent']}
+        
+        Component Requirements:
+        - Mobile-first responsive design
+        - Smooth animations and transitions
+        - Interactive elements with hover effects
+        - Proper accessibility attributes
+        - Clean, modern layout
+        - Integration of calendar, location, RSVP if provided
+        
+        Output only the JSX component code.
+        """
+        
+        response = await self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=4000
+        )
+        
+        code = response.choices[0].message.content.strip()
+        
+        # Очищаем от markdown оберток
+        if code.startswith("```"):
+            code = code.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        
+        return code
+
+    def generate_html(self, event_json: dict) -> str:
+        print(f"[HTML] event_json id={event_json.get('id')} title={event_json.get('content_details', {}).get('event_title')}")
+        event = EventData.parse_obj(event_json)
+        data = event.content_details
+        # Получаем UUID сайта, если есть
+        site_id = str(event_json.get('id', ''))
+        # Получаем цветовую схему и стили темы
+        colors = self._get_color_scheme(event.color_preferences)
+        theme_styles = self._get_theme_styles(event.theme)
+        # Парсим дату события
+        event_date = None
+        if data.get('event_date'):
             try:
-                logger.info("🔌 Testing OpenAI API connection...")
-                
-                # FIXED: Use regular chat completion instead of beta structured outputs
-                response = await self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=0.8,  # Higher creativity
-                    max_tokens=2000
-                )
-                
-                logger.info("✅ OpenAI API responded successfully!")
-                
-                # Parse the response manually (more reliable than structured outputs)
-                content = response.choices[0].message.content
-                logger.info(f"📝 Generated content length: {len(content)} chars")
-                
-                # Extract structured data from GPT response
-                result = self._parse_gpt_response_to_structure(content, request)
-                
-                # Add user preferences and content to the result
-                result.event_type = request.event_type
-                result.color_preferences = request.color_preferences
-                result.style_preferences = request.style_preferences
-                result.theme = request.theme
-                result.content_details = request.content_details
-                
-                # Override title and description with user data if provided
-                if request.content_details.get('event_title'):
-                    result.title = request.content_details['event_title']
-                if request.content_details.get('description'):
-                    result.meta_description = request.content_details['description']
-                
-                logger.info(f"🎉 SUCCESS: Generated site '{result.title}' with {result.event_type} theme")
-                return result
-                
-            except Exception as openai_error:
-                logger.error(f"❌ OpenAI API FAILED: {type(openai_error).__name__}: {openai_error}")
-                logger.error(f"🔍 API Key present: {'sk-' in str(settings.OPENAI_API_KEY)}")
-                
-                # Only fallback if necessary, but log it clearly
-                logger.warning("⚠️ FALLING BACK to static template due to OpenAI failure")
-                return self._create_react_fallback_structure(request)
-                
-        except Exception as e:
-            logger.error(f"💥 CRITICAL ERROR in site generation: {e}")
-            raise
-
-    def _parse_gpt_response_to_structure(self, content: str, request: SiteGenerationRequest) -> GeneratedReactSite:
-        """Parse GPT response into structured format - more reliable than structured outputs"""
-        try:
-            # Try to extract JSON if GPT provided it
-            import json
-            import re
-            
-            # Look for JSON in the response
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
-            if json_match:
-                try:
-                    parsed_json = json.loads(json_match.group())
-                    logger.info("📋 Successfully parsed JSON from GPT response")
-                    
-                    # Create structure from parsed JSON
-                    return GeneratedReactSite(
-                        title=parsed_json.get('title', request.content_details.get('event_title', 'Особенное событие')),
-                        meta_description=parsed_json.get('meta_description', request.content_details.get('description', 'Приглашаем вас на незабываемое мероприятие')),
-                        component_name=parsed_json.get('component_name', f"{request.event_type.title()}Landing"),
-                        hero_section=parsed_json.get('hero_section', {}),
-                        about_section=parsed_json.get('about_section', {}),
-                        features_section=parsed_json.get('features_section', {}),
-                        contact_section=parsed_json.get('contact_section', {}),
-                        footer_section=parsed_json.get('footer_section', {}),
-                        color_palette=parsed_json.get('color_palette', self._get_smart_colors(request)),
-                        theme_config=parsed_json.get('theme_config', {}),
-                        animations=parsed_json.get('animations', ['hover:scale-105', 'transition-all']),
-                        dependencies=parsed_json.get('dependencies', ['react', '@types/react', 'tailwindcss']),
-                        event_type=request.event_type,
-                        color_preferences=request.color_preferences,
-                        style_preferences=request.style_preferences,
-                        content_details=request.content_details
-                    )
-                except json.JSONDecodeError:
-                    logger.warning("📋 GPT response not valid JSON, using smart extraction")
-            
-            # Smart extraction from text if no JSON
-            title = self._extract_title_from_text(content, request)
-            description = self._extract_description_from_text(content, request)
-            
-            logger.info(f"🧠 Smart extracted - Title: {title}, Description: {description[:50]}...")
-            
-            return GeneratedReactSite(
-                title=title,
-                meta_description=description,
-                component_name=f"{request.event_type.title()}Landing",
-                hero_section={
-                    "title": title,
-                    "subtitle": description,
-                    "cta_text": "Узнать подробности",
-                    "background_type": "gradient_mesh"
-                },
-                about_section={
-                    "title": "О событии",
-                    "content": description
-                },
-                color_palette=self._get_smart_colors(request),
-                theme_config=self._get_theme_config(request),
-                animations=['hover:scale-105', 'transition-all', 'animate-pulse-soft'],
-                dependencies=['react', '@types/react', 'tailwindcss'],
-                event_type=request.event_type,
-                color_preferences=request.color_preferences,
-                style_preferences=request.style_preferences,
-                theme=request.theme,
-                content_details=request.content_details
-            )
-            
-        except Exception as e:
-            logger.error(f"❌ Error parsing GPT response: {e}")
-            return self._create_react_fallback_structure(request)
-
-    def _extract_title_from_text(self, content: str, request: SiteGenerationRequest) -> str:
-        """Extract title from GPT text response"""
-        # Try to find title in content
-        import re
+                event_date = datetime.strptime(data['event_date'], '%Y-%m-%d')
+            except ValueError:
+                pass
+        # Генерируем компоненты
+        calendar_html = self._generate_calendar_html(event_date, colors)
+        rsvp_section = self._generate_rsvp_section(data, colors, theme_styles, site_id=site_id)
+        contact_section = self._generate_contact_section(data, colors, theme_styles)
         
-        # Look for title patterns
-        title_patterns = [
-            r'title["\s]*:?["\s]*(.*?)["\\n]',
-            r'Название["\s]*:?["\s]*(.*?)["\\n]', 
-            r'заголовок["\s]*:?["\s]*(.*?)["\\n]',
-            r'^#\s*(.*?)$',
-            r'^\*\*(.*?)\*\*'
-        ]
+        # Форматируем дату и время
+        formatted_date = format_date(event_date, 'EEEE, d MMMM y', locale='ru').capitalize() if event_date else ''
+        formatted_time = data.get('event_time', '').split(':')[:2]
+        formatted_time = ':'.join(formatted_time) if len(formatted_time) == 2 else data.get('event_time', '')
         
-        for pattern in title_patterns:
-            match = re.search(pattern, content, re.IGNORECASE | re.MULTILINE)
-            if match and match.group(1).strip():
-                title = match.group(1).strip().strip('"').strip("'")
-                if len(title) > 3 and len(title) < 100:
-                    return title
+        # Дополнительные CSS стили для темы
+        extra_styles = ""
+        if event.theme == "classic":
+            extra_styles += """
+            .font-serif { font-family: "Playfair Display", "Georgia", serif; }
+            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&display=swap');
+            """
+        elif event.theme == "minimalist":
+            extra_styles += """
+            .font-light { font-weight: 300; }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+            * { font-family: 'Inter', sans-serif; }
+            """
+        elif event.theme == "elegant":
+            extra_styles += """
+            @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
+            .font-elegant { font-family: 'Cormorant Garamond', serif; }
+            """
         
-        # Fallback to request data
-        return request.content_details.get('event_title', f"Особенное {request.event_type}")
-
-    def _extract_description_from_text(self, content: str, request: SiteGenerationRequest) -> str:
-        """Extract description from GPT text response"""
-        import re
-        
-        # Look for description patterns
-        desc_patterns = [
-            r'description["\s]*:?["\s]*(.*?)["\\n]',
-            r'описание["\s]*:?["\s]*(.*?)["\\n]',
-            r'meta_description["\s]*:?["\s]*(.*?)["\\n]'
-        ]
-        
-        for pattern in desc_patterns:
-            match = re.search(pattern, content, re.IGNORECASE | re.MULTILINE)
-            if match and match.group(1).strip():
-                desc = match.group(1).strip().strip('"').strip("'")
-                if len(desc) > 10 and len(desc) < 200:
-                    return desc
-        
-        # Use first meaningful paragraph as description
-        lines = content.split('\n')
-        for line in lines:
-            line = line.strip()
-            if len(line) > 20 and len(line) < 200 and not line.startswith('#'):
-                return line
-        
-        # Fallback
-        return request.content_details.get('description', 'Приглашаем вас на незабываемое мероприятие!')
-
-    def _get_smart_colors(self, request: SiteGenerationRequest) -> Dict[str, str]:
-        """Get smart color palette based on user preferences"""
-        # Normalize preferences
-        enum_to_phrase = {
-            # Matches значения из фронта
-            'romantic_pastels': 'романтичные пастельные тона розовый голубой лавандовый',
-            'vibrant_celebration': 'яркие праздничные цвета красный бирюзовый синий',
-            'elegant_neutrals': 'элегантные нейтральные бежевый песочный коричневый золотистый',
-            'bold_modern': 'смелые современные темно-синий красный оранжевый',
-            'nature_inspired': 'природные зеленый оранжевый фиолетовый',
-            'classic_black_white': 'классический черно-белый серый',
-        }
-
-        color_pref_raw = request.color_preferences or ''
-        if color_pref_raw in enum_to_phrase:
-            color_pref_raw = enum_to_phrase[color_pref_raw]
-
-        theme_raw = request.theme or ''
-        theme_to_phrase = {
-            'modern': 'современный минималистичный',
-            'classic': 'классический элегантный',
-            'elegant': 'элегантный роскошный',
-            'playful': 'игривый яркий',
-            'rustic': 'рустик природный',
-            'vintage': 'винтажный ретро',
-        }
-        if theme_raw in theme_to_phrase:
-            theme_raw = theme_to_phrase[theme_raw]
-
-        color_prefs = color_pref_raw.lower()
-        theme = theme_raw.lower()
-        event_type = request.event_type
-        
-        # Умное определение цветов на основе детальных предпочтений
-        if any(word in color_prefs for word in ['элегантные', 'нейтральные', 'бежевый', 'песочный', 'коричневый', 'золотистый']):
-            return {'primary': 'amber', 'secondary': 'orange', 'accent': 'yellow'}
-        elif any(word in color_prefs for word in ['романтичные', 'пастельные', 'розовый', 'голубой', 'лавандовый']):
-            return {'primary': 'rose', 'secondary': 'pink', 'accent': 'purple'}
-        elif any(word in color_prefs for word in ['яркие', 'праздничные', 'красный', 'бирюзовый']):
-            return {'primary': 'red', 'secondary': 'teal', 'accent': 'blue'}
-        elif any(word in color_prefs for word in ['смелые', 'современные', 'темно-синий']):
-            return {'primary': 'slate', 'secondary': 'blue', 'accent': 'orange'}
-        elif any(word in color_prefs for word in ['природные', 'зеленый']):
-            return {'primary': 'emerald', 'secondary': 'teal', 'accent': 'cyan'}
-        elif any(word in color_prefs for word in ['классический', 'черно-белый', 'серый']):
-            return {'primary': 'slate', 'secondary': 'gray', 'accent': 'zinc'}
-        
-        # Умное определение по теме
-        if any(word in theme for word in ['винтажный', 'ретро', 'ностальгия']):
-            return {'primary': 'amber', 'secondary': 'orange', 'accent': 'red'}
-        elif any(word in theme for word in ['элегантный', 'роскошный', 'изысканность']):
-            return {'primary': 'purple', 'secondary': 'indigo', 'accent': 'pink'}
-        elif any(word in theme for word in ['классический', 'традиции']):
-            return {'primary': 'slate', 'secondary': 'gray', 'accent': 'blue'}
-        elif any(word in theme for word in ['игривый', 'яркий', 'веселье']):
-            return {'primary': 'pink', 'secondary': 'purple', 'accent': 'blue'}
-        elif any(word in theme for word in ['рустик', 'природный', 'естественность']):
-            return {'primary': 'emerald', 'secondary': 'teal', 'accent': 'cyan'}
-        elif any(word in theme for word in ['современный', 'минималистичный']):
-            return {'primary': 'blue', 'secondary': 'indigo', 'accent': 'purple'}
-        
-        # Базовое определение по цветам (английский/русский)
-        if any(word in color_prefs for word in ['rose', 'розов', 'pink', 'красн']):
-            return {'primary': 'rose', 'secondary': 'pink', 'accent': 'purple'}
-        elif any(word in color_prefs for word in ['blue', 'син', 'голуб', 'indigo']):
-            return {'primary': 'blue', 'secondary': 'indigo', 'accent': 'purple'}
-        elif any(word in color_prefs for word in ['green', 'зелен', 'emerald']):
-            return {'primary': 'emerald', 'secondary': 'teal', 'accent': 'cyan'}
-        elif any(word in color_prefs for word in ['yellow', 'желт', 'amber', 'золот']):
-            return {'primary': 'amber', 'secondary': 'orange', 'accent': 'red'}
-        elif any(word in color_prefs for word in ['purple', 'фиолет', 'violet']):
-            return {'primary': 'purple', 'secondary': 'indigo', 'accent': 'pink'}
-        
-        # Default по типу события
-        event_colors = {
-            'wedding': {'primary': 'rose', 'secondary': 'pink', 'accent': 'purple'},
-            'birthday': {'primary': 'blue', 'secondary': 'indigo', 'accent': 'purple'},
-            'corporate': {'primary': 'slate', 'secondary': 'gray', 'accent': 'zinc'},
-            'anniversary': {'primary': 'emerald', 'secondary': 'teal', 'accent': 'cyan'},
-            'graduation': {'primary': 'amber', 'secondary': 'orange', 'accent': 'red'}
-        }
-        
-        return event_colors.get(event_type, {'primary': 'blue', 'secondary': 'indigo', 'accent': 'purple'})
-
-    def _get_theme_config(self, request: SiteGenerationRequest) -> Dict[str, Any]:
-        """Get theme configuration based on preferences"""
-        return {
-            "extend": {
-                "animation": {
-                    "float": "float 6s ease-in-out infinite",
-                    "glow": "glow 3s ease-in-out infinite alternate",
-                    "gradient": "gradient 15s ease infinite"
-                },
-                "keyframes": {
-                    "float": {
-                        "0%, 100%": {"transform": "translateY(0px)"},
-                        "50%": {"transform": "translateY(-20px)"}
-                    },
-                    "glow": {
-                        "0%": {"opacity": "0.5"},
-                        "100%": {"opacity": "1"}
-                    }
-                }
-            }
-        }
-
-    async def generate_react_page(self, site_data: GeneratedReactSite) -> str:
-        """Generate professional React component with v0.dev-inspired prompting"""
-        try:
-            # V0.dev inspired system prompt with thinking blocks
-            system_prompt = """<Thinking>
-You are a world-class React/TypeScript architect inspired by v0.dev, bolt.new, and Loveable.
-Your mission: Generate production-ready React components that are visually stunning and technically perfect.
-
-Key principles from successful AI tools:
-1. V0.dev: MDX format with structured thinking, TypeScript-first approach
-2. Bolt.new: Full-stack integration capabilities  
-3. GrapesJS: Visual component modularity
-4. Deco.cx: Modern React patterns with Tailwind mastery
-5. ReactFlow: Node-based thinking for component relationships
-
-Output format: Pure TypeScript React component, ready to copy-paste
-</Thinking>
-
-🎯 CRITICAL MISSION: Create a VISUALLY STUNNING React landing page
-
-🔥 MANDATORY TECHNICAL REQUIREMENTS:
-
-⚛️ REACT ARCHITECTURE:
-✅ Functional components with TypeScript interfaces
-✅ useState, useCallback, useEffect hooks
-✅ Proper event handling with type safety
-✅ Component composition patterns
-
-🎨 ADVANCED TAILWIND TECHNIQUES:
-✅ Glass morphism: backdrop-blur-xl, bg-white/10
-✅ Gradient mastery: bg-gradient-to-br, bg-gradient-conic
-✅ Animation excellence: hover:scale-105, transition-all duration-300
-✅ Typography hierarchy: text-6xl, tracking-tight, font-extrabold
-
-💎 VISUAL EXCELLENCE:
-✅ Hero section with animated gradients
-✅ Features grid with hover effects  
-✅ Contact form with validation
-✅ Responsive design (mobile-first)
-✅ Accessibility (WCAG compliant)
-
-🚀 MODERN PATTERNS:
-✅ Controlled form components
-✅ Loading states and error handling
-✅ Micro-interactions on hover
-✅ Semantic HTML structure
-
-RETURN ONLY THE COMPLETE .TSX FILE - NO EXPLANATIONS!"""
-
-            # Enhanced user prompt with structured data
-            user_prompt = f"""Create a {site_data.event_type} landing page with these specifications:
-
-**Site Data:**
-- Title: {site_data.title}
-- Description: {site_data.meta_description}
-- Component Name: {site_data.component_name}
-- Color Palette: {site_data.color_palette}
-- Animations: {site_data.animations}
-
-**Sections Required:**
-- Hero: Eye-catching header with call-to-action
-- About: Compelling description
-- Features: Key highlights (3-4 items)
-- Contact: Working form with validation
-- Footer: Clean and professional
-
-**Technical Specs:**
-- TypeScript interfaces for all props
-- Modern React hooks (useState, useCallback)
-- Tailwind CSS with glass morphism effects
-- Responsive design for all devices
-- Form validation and submission handling
-
-Generate a complete, production-ready React component that embodies the {site_data.event_type} theme with the specified color palette."""
-
-            # Enhanced API call with better error handling
-            try:
-                response = await self.client.chat.completions.create(
-                    model="gpt-4",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    max_tokens=4000,
-                    temperature=0.7
-                )
-                
-                react_code = response.choices[0].message.content.strip()
-                
-                # Clean and validate the generated code
-                if "```tsx" in react_code:
-                    react_code = react_code.split("```tsx")[1].split("```")[0].strip()
-                elif "```typescript" in react_code:
-                    react_code = react_code.split("```typescript")[1].split("```")[0].strip()
-                elif "```" in react_code:
-                    react_code = react_code.split("```")[1].split("```")[0].strip()
-                
-                # Ensure proper imports and exports
-                if not react_code.startswith("import"):
-                    react_code = f"import React, {{ useState, useCallback }} from 'react';\n\n{react_code}"
-                
-                if not f"export default {site_data.component_name}" in react_code:
-                    react_code += f"\n\nexport default {site_data.component_name};"
-                
-                # Подставляем динамические цвета из palette
-                react_code = (
-                    react_code
-                    .replace("PRIMARY_DARK", f"{primary}-900")
-                    .replace("SECONDARY_DARK", f"{secondary}-900")
-                    .replace("PRIMARY", primary)
-                    .replace("SECONDARY", secondary)
-                )
-                
-                return react_code
-                
-            except Exception as api_error:
-                # Используем fallback при ошибке API
-                return self._create_v0_inspired_fallback(site_data)
-                
-        except Exception as e:
-            # Используем fallback при любой ошибке генерации
-            return self._create_v0_inspired_fallback(site_data)
-
-    async def generate_html_preview(self, site_data: GeneratedReactSite) -> str:
-        """Generate HTML preview with smart color detection and user-selected styles"""
-        try:
-            # Extract user data from site_data.content_details (user form input)
-            content_details = getattr(site_data, 'content_details', {}) or {}
-            color_preferences = getattr(site_data, 'color_preferences', '') or ''
-            theme = getattr(site_data, 'theme', '') or ''
-            event_type = getattr(site_data, 'event_type', 'birthday')
-            
-            # Extract real user content - USE FORM DATA FIRST, then fallback to site_data
-            event_title = content_details.get('event_title') or site_data.title or 'Ваше событие'
-            event_date = content_details.get('event_date') or 'Дата уточняется'
-            event_time = content_details.get('event_time') or 'Время уточняется'  
-            event_location = content_details.get('venue_name') or 'Место уточняется'
-            venue_address = content_details.get('venue_address', '')
-            event_description = content_details.get('description') or 'Добро пожаловать на наше событие!'
-            organizer_name = content_details.get('contact_name') or 'Организатор'
-            organizer_phone = content_details.get('contact_phone') or '+7 (999) 000-00-00'
-            organizer_email = content_details.get('contact_email') or 'contact@event.com'
-            template_id = content_details.get('template_id', '')
-            decorative_elements = content_details.get('decorative_elements', '')
-            
-            # Log user data extraction for debugging
-            logger.info(f"🎯 USER DATA EXTRACTED:")
-            logger.info(f"  Event Title: {event_title}")
-            logger.info(f"  Event Date: {event_date}")
-            logger.info(f"  Event Time: {event_time}")
-            logger.info(f"  Venue: {event_location}")
-            logger.info(f"  Description: {event_description[:50]}...")
-            logger.info(f"  Contact: {organizer_name}")
-            logger.info(f"  Color Prefs: {color_preferences}")
-            logger.info(f"  Theme: {theme}")
-            
-            # Smart color scheme detection based on user preferences
-            def get_smart_color_scheme(color_preferences: str, theme: str, event_type: str) -> str:
-                if not color_preferences and not theme:
-                    return event_type
-                
-                color_prefs_lower = (color_preferences or '').lower()
-                theme_lower = (theme or '').lower()
-                
-                # Детальное определение по предпочтениям
-                if any(word in color_prefs_lower for word in ['элегантные', 'нейтральные', 'бежевый', 'песочный', 'коричневый', 'золотистый']):
-                    return 'vintage'  # Винтажная золотистая схема
-                if any(word in color_prefs_lower for word in ['романтичные', 'пастельные', 'розовый', 'голубой', 'лавандовый']):
-                    return 'wedding'
-                if any(word in color_prefs_lower for word in ['яркие', 'праздничные', 'красный', 'бирюзовый']):
-                    return 'celebration'  # Яркая праздничная схема
-                if any(word in color_prefs_lower for word in ['смелые', 'современные', 'темно-синий']):
-                    return 'corporate'
-                if any(word in color_prefs_lower for word in ['природные', 'зеленый']):
-                    return 'anniversary'
-                if any(word in color_prefs_lower for word in ['классический', 'черно-белый', 'серый']):
-                    return 'corporate'
-                
-                # Определение по теме
-                if any(word in theme_lower for word in ['винтажный', 'ретро', 'ностальгия']):
-                    return 'vintage'
-                if any(word in theme_lower for word in ['элегантный', 'роскошный', 'изысканность']):
-                    return 'elegant'
-                if any(word in theme_lower for word in ['классический', 'традиции']):
-                    return 'corporate'
-                if any(word in theme_lower for word in ['игривый', 'яркий', 'веселье']):
-                    return 'celebration'
-                if any(word in theme_lower for word in ['рустик', 'природный', 'естественность']):
-                    return 'anniversary'
-                if any(word in theme_lower for word in ['современный', 'минималистичный']):
-                    return 'birthday'
-                
-                # Базовое определение по цветам
-                if any(word in color_prefs_lower for word in ['rose', 'розов', 'pink', 'красн']):
-                    return 'wedding'
-                if any(word in color_prefs_lower for word in ['blue', 'син', 'голуб', 'indigo', 'фиолет']):
-                    return 'birthday'
-                if any(word in color_prefs_lower for word in ['emerald', 'зелен', 'teal', 'cyan']):
-                    return 'anniversary'
-                if any(word in color_prefs_lower for word in ['amber', 'желт', 'золот', 'orange', 'оранж']):
-                    return 'graduation'
-                if any(word in color_prefs_lower for word in ['slate', 'сер', 'gray', 'серый']):
-                    return 'corporate'
-                
-                return event_type
-            
-            # Determine actual color scheme
-            actual_color_scheme = get_smart_color_scheme(color_preferences, theme, event_type)
-            
-            # Enhanced color palettes matching frontend logic
-            color_palettes = {
-                'vintage': {
-                    'primary': 'amber', 'secondary': 'orange', 'accent': 'red',
-                    'gradient': 'from-amber-50 via-orange-50 to-red-50',
-                    'hero_gradient': 'from-amber-900 via-orange-900 to-red-900',
-                    'text_gradient': 'from-white via-amber-200 to-orange-200',
-                    'glass_tint': 'amber'
-                },
-                'elegant': {
-                    'primary': 'purple', 'secondary': 'indigo', 'accent': 'pink',
-                    'gradient': 'from-purple-50 via-indigo-50 to-pink-50',
-                    'hero_gradient': 'from-purple-900 via-indigo-900 to-pink-900',
-                    'text_gradient': 'from-white via-purple-200 to-pink-200',
-                    'glass_tint': 'purple'
-                },
-                'celebration': {
-                    'primary': 'red', 'secondary': 'teal', 'accent': 'blue',
-                    'gradient': 'from-red-50 via-teal-50 to-blue-50',
-                    'hero_gradient': 'from-red-900 via-teal-900 to-blue-900',
-                    'text_gradient': 'from-white via-red-200 to-blue-200',
-                    'glass_tint': 'red'
-                },
-                'wedding': {
-                    'primary': 'rose', 'secondary': 'pink', 'accent': 'purple',
-                    'gradient': 'from-rose-50 via-pink-50 to-purple-50',
-                    'hero_gradient': 'from-rose-900 via-pink-900 to-purple-900',
-                    'text_gradient': 'from-white via-rose-200 to-purple-200',
-                    'glass_tint': 'rose'
-                },
-                'birthday': {
-                    'primary': 'blue', 'secondary': 'indigo', 'accent': 'purple',
-                    'gradient': 'from-blue-50 via-indigo-50 to-purple-50',
-                    'hero_gradient': 'from-blue-900 via-indigo-900 to-purple-900',
-                    'text_gradient': 'from-white via-blue-200 to-indigo-200',
-                    'glass_tint': 'blue'
-                },
-                'corporate': {
-                    'primary': 'slate', 'secondary': 'gray', 'accent': 'zinc',
-                    'gradient': 'from-slate-50 via-gray-50 to-zinc-50',
-                    'hero_gradient': 'from-slate-900 via-gray-900 to-zinc-900',
-                    'text_gradient': 'from-white via-slate-200 to-gray-200',
-                    'glass_tint': 'slate'
-                },
-                'anniversary': {
-                    'primary': 'emerald', 'secondary': 'teal', 'accent': 'cyan',
-                    'gradient': 'from-emerald-50 via-teal-50 to-cyan-50',
-                    'hero_gradient': 'from-emerald-900 via-teal-900 to-cyan-900',
-                    'text_gradient': 'from-white via-emerald-200 to-teal-200',
-                    'glass_tint': 'emerald'
-                },
-                'graduation': {
-                    'primary': 'amber', 'secondary': 'orange', 'accent': 'red',
-                    'gradient': 'from-amber-50 via-orange-50 to-red-50',
-                    'hero_gradient': 'from-amber-900 via-orange-900 to-red-900',
-                    'text_gradient': 'from-white via-amber-200 to-orange-200',
-                    'glass_tint': 'amber'
-                },
-                'housewarming': {
-                    'primary': 'emerald', 'secondary': 'green', 'accent': 'teal',
-                    'gradient': 'from-emerald-50 via-green-50 to-teal-50',
-                    'hero_gradient': 'from-emerald-900 via-green-900 to-teal-900',
-                    'text_gradient': 'from-white via-emerald-200 to-green-200',
-                    'glass_tint': 'emerald'
-                }
-            }
-            
-            # Попробуем использовать palette из site_data (пришёл из _get_smart_colors)
-            site_palette = getattr(site_data, 'color_palette', {}) or {}
-
-            if {'primary', 'secondary'}.issubset(site_palette.keys()):
-                primary = site_palette['primary']
-                secondary = site_palette['secondary']
-                palette = {
-                    'primary': primary,
-                    'secondary': secondary,
-                    'hero': f"from-{primary}-900 via-{secondary}-900 to-{primary}-900"
-                }
-            else:
-                # Статическое резервное соответствие
-                color_palettes = {
-                    'wedding': {'primary': 'rose', 'secondary': 'pink', 'hero': 'from-rose-900 via-pink-900 to-purple-900'},
-                    'birthday': {'primary': 'blue', 'secondary': 'indigo', 'hero': 'from-blue-900 via-indigo-900 to-purple-900'},
-                    'corporate': {'primary': 'slate', 'secondary': 'gray', 'hero': 'from-slate-900 via-gray-900 to-zinc-900'},
-                    'anniversary': {'primary': 'emerald', 'secondary': 'teal', 'hero': 'from-emerald-900 via-teal-900 to-cyan-900'},
-                    'graduation': {'primary': 'amber', 'secondary': 'orange', 'hero': 'from-amber-900 via-orange-900 to-red-900'}
-                }
-                palette = color_palettes.get(actual_color_scheme, color_palettes['birthday'])
-            
-            # Generate HTML with proper variable substitution
-            html_template = f"""<!DOCTYPE html>
-<html lang="ru" class="scroll-smooth">
+        html = f"""<!DOCTYPE html>
+<html lang='ru' class='scroll-smooth'>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{event_title}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {{
-            theme: {{
-                extend: {{
-                    animation: {{
-                        'float': 'float 6s ease-in-out infinite',
-                        'float-delayed': 'float 8s ease-in-out infinite', 
-                        'glow': 'glow 3s ease-in-out infinite alternate',
-                        'fade-in': 'fadeIn 1.2s ease-out',
-                        'fade-in-up': 'fadeInUp 1s ease-out',
-                        'spin-slow': 'spin 30s linear infinite',
-                        'pulse-soft': 'pulse 4s ease-in-out infinite',
-                        'bounce-soft': 'bounceSoft 2s ease-in-out infinite'
-                    }},
-                    keyframes: {{
-                        float: {{ 
-                            '0%, 100%': {{ transform: 'translateY(0px) rotate(0deg)' }}, 
-                            '50%': {{ transform: 'translateY(-20px) rotate(2deg)' }} 
-                        }},
-                        glow: {{ 
-                            '0%': {{ opacity: '0.4' }}, 
-                            '100%': {{ opacity: '0.8' }} 
-                        }},
-                        fadeIn: {{ 
-                            '0%': {{ opacity: '0', transform: 'translateY(30px)' }}, 
-                            '100%': {{ opacity: '1', transform: 'translateY(0)' }} 
-                        }},
-                        fadeInUp: {{ 
-                            '0%': {{ opacity: '0', transform: 'translateY(40px)' }}, 
-                            '100%': {{ opacity: '1', transform: 'translateY(0)' }} 
-                        }}
-                    }}
-                }}
-            }}
-        }}
-    </script>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>{data.get('event_title', 'Приглашение на событие')}</title>
+    <script src='https://cdn.tailwindcss.com'></script>
     <style>
-        .text-shadow {{ text-shadow: 0 4px 8px rgba(0,0,0,0.3); }}
-        .glass-effect {{ 
+        {extra_styles}
+        
+        .elegant-shadow {{ 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 
+                       0 0 0 1px rgba(255, 255, 255, 0.1); 
+        }}
+        
+        .text-shadow {{ 
+            text-shadow: 0 4px 8px rgba(0,0,0,0.1), 
+                        0 2px 4px rgba(0,0,0,0.1); 
+        }}
+        
+        .fade-in {{ 
+            animation: fadeIn 1s ease-out forwards; 
+            opacity: 0;
+        }}
+        
+        .slide-up {{ 
+            animation: slideUp 0.8s ease-out forwards; 
+            opacity: 0;
+            transform: translateY(30px);
+        }}
+        
+        .slide-up:nth-child(2) {{ animation-delay: 0.2s; }}
+        .slide-up:nth-child(3) {{ animation-delay: 0.4s; }}
+        .slide-up:nth-child(4) {{ animation-delay: 0.6s; }}
+        
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(20px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+        
+        @keyframes slideUp {{
+            from {{ opacity: 0; transform: translateY(30px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+        
+        .gradient-text {{
+            background: linear-gradient(135deg, var(--tw-gradient-stops));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }}
+        
+        .gradient-bg {{
+            background: linear-gradient(135deg, var(--tw-gradient-stops));
+        }}
+        
+        .time-badge {{
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }}
+        
+        .location-card {{
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.8) 100%);
+            backdrop-filter: blur(15px);
+        }}
+        
+        .icon-gradient {{
+            background: linear-gradient(135deg, var(--tw-gradient-stops));
+        }}
+        
+        .hover-lift {{
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }}
+        
+        .hover-lift:hover {{
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+        }}
+        
+        .pulse-gentle {{
+            animation: pulseGentle 2s infinite;
+        }}
+        
+        @keyframes pulseGentle {{
+            0%, 100% {{ transform: scale(1); }}
+            50% {{ transform: scale(1.05); }}
+        }}
+        
+        .glass-effect {{
             background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
+        }}
+        
+        .map-placeholder {{
+            background: linear-gradient(135deg, {colors['secondary']});
+            border: 2px dashed rgba(156, 163, 175, 0.3);
+            position: relative;
+            overflow: hidden;
+        }}
+        
+        .map-placeholder::before {{
+            content: "📍";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            opacity: 0.2;
+        }}
+        
+        .map-placeholder::after {{
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
+            animation: shimmer 3s infinite;
+        }}
+        
+        @keyframes shimmer {{
+            0% {{ transform: translateX(-100%); }}
+            100% {{ transform: translateX(100%); }}
+        }}
+        
+        @media (max-width: 640px) {{
+            .{theme_styles['title']} {{
+                font-size: 2.5rem;
+                line-height: 1.1;
+            }}
+            
+            .{theme_styles['description']} {{
+                font-size: 1.1rem;
+                line-height: 1.5;
+            }}
         }}
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br {palette['hero_gradient']} text-white overflow-x-hidden">
-    <!-- Hero Section -->
-    <section class="relative min-h-screen flex items-center justify-center overflow-hidden">
-        <!-- Animated Background Elements -->
-        <div class="absolute inset-0 bg-gradient-conic from-{palette['primary']}-500 via-{palette['secondary']}-500 to-{palette['primary']}-500 opacity-20 animate-spin-slow"></div>
-        <div class="absolute top-20 left-20 w-32 h-32 bg-gradient-conic from-{palette['primary']}-500 via-{palette['secondary']}-400 to-{palette['primary']}-500 rounded-full opacity-20 animate-float blur-sm"></div>
-        <div class="absolute bottom-32 right-20 w-24 h-24 bg-gradient-conic from-{palette['secondary']}-500 via-{palette['primary']}-400 to-{palette['secondary']}-500 opacity-25 animate-float-delayed"></div>
-        
-        <!-- Hero Content -->
-        <div class="relative z-10 max-w-5xl mx-auto text-center px-6">
-            <div class="space-y-8">
-                <h1 class="text-4xl md:text-6xl lg:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r {palette['text_gradient']} mb-8 tracking-tight animate-fade-in text-shadow leading-tight">
-                    {event_title}
+<body class="{colors['background']} min-h-screen">
+    <div class="min-h-screen py-8 sm:py-12 px-4">
+        <div class="{theme_styles['container']}">
+            <!-- Hero Section -->
+            <div class="py-48 text-center mb-12 sm:mb-16 fade-in">
+                <h1 class="{theme_styles['title']} gradient-text bg-gradient-to-r {colors['primary']} text-shadow mb-6 sm:mb-8">
+                    {data.get('event_title', 'Приглашение на событие')}
                 </h1>
-                <p class="text-lg md:text-xl lg:text-2xl text-gray-200 mb-12 leading-relaxed max-w-4xl mx-auto animate-fade-in font-light" style="animation-delay: 0.3s;">
-                    {event_description}
+                
+                <p class="{theme_styles['description']} {colors['accent']} max-w-4xl mx-auto mb-8">
+                    {data.get('description', 'Присоединяйтесь к нам на особенном празднике')}
                 </p>
                 
-                <!-- Event Details Cards -->
-                <div class="flex flex-wrap justify-center gap-4 mb-12 animate-fade-in" style="animation-delay: 0.4s;">
-                    <div class="glass-effect px-4 py-3 rounded-xl text-white">
-                        <div class="text-xs opacity-80">📅 Дата</div>
-                        <div class="font-bold text-sm">{event_date}</div>
+                <div class="inline-flex items-center gap-3 time-badge px-6 py-3 rounded-full glass-effect">
+                    <div class="w-8 h-8 icon-gradient bg-gradient-to-r {colors['primary']} rounded-full flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
                     </div>
-                    <div class="glass-effect px-4 py-3 rounded-xl text-white">
-                        <div class="text-xs opacity-80">⏰ Время</div>
-                        <div class="font-bold text-sm">{event_time}</div>
-                    </div>
-                    <div class="glass-effect px-4 py-3 rounded-xl text-white">
-                        <div class="text-xs opacity-80">📍 Место</div>
-                        <div class="font-bold text-sm">{event_location}</div>
-                    </div>
-                </div>
-                
-                <div class="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style="animation-delay: 0.6s;">
-                    <button class="group px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-500 transform bg-gradient-to-r from-{palette['primary']}-600 to-{palette['secondary']}-600 text-white hover:scale-105 hover:shadow-xl relative overflow-hidden">
-                        <span class="relative z-10">Присоединиться</span>
-                    </button>
-                    <button class="group px-8 py-4 rounded-2xl font-semibold text-lg transition-all duration-500 transform glass-effect text-white hover:bg-white/30 hover:scale-105">
-                        <span class="relative z-10">Подробнее</span>
-                    </button>
+                    <span class="text-sm sm:text-base font-medium {colors['accent']}">
+                        {formatted_date}{f', {formatted_time}' if formatted_time else ''}
+                    </span>
                 </div>
             </div>
-        </div>
-    </section>
-
-    <!-- About Section -->
-    <section class="py-20 px-6 bg-gradient-to-r from-{palette['primary']}-900/30 to-{palette['secondary']}-900/30 backdrop-blur-xl relative">
-        <div class="max-w-4xl mx-auto text-center relative z-10">
-            <h2 class="text-3xl md:text-5xl font-extrabold text-white mb-8 animate-fade-in-up text-shadow">
-                О событии
-            </h2>
-            <p class="text-lg md:text-xl text-gray-200 leading-relaxed animate-fade-in-up font-light" style="animation-delay: 0.2s;">
-                {event_description}
-            </p>
             
-            <!-- Event Info Grid -->
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12 animate-fade-in-up" style="animation-delay: 0.4s;">
-                <div class="glass-effect p-6 rounded-2xl hover:scale-105 transition-all duration-300">
-                    <div class="text-3xl mb-3">📍</div>
-                    <h3 class="text-lg font-bold text-white mb-2">Адрес</h3>
-                    <p class="text-gray-300 text-sm">{venue_address if venue_address else 'Адрес уточняется'}</p>
-                </div>
-                <div class="glass-effect p-6 rounded-2xl hover:scale-105 transition-all duration-300">
-                    <div class="text-3xl mb-3">📱</div>
-                    <h3 class="text-lg font-bold text-white mb-2">Контакты</h3>
-                    <p class="text-gray-300 text-sm">{organizer_name}</p>
-                    <p class="text-gray-300 text-xs">{organizer_phone}</p>
-                </div>
-                <div class="glass-effect p-6 rounded-2xl hover:scale-105 transition-all duration-300 md:col-span-2 lg:col-span-1">
-                    <div class="text-3xl mb-3">✉️</div>
-                    <h3 class="text-lg font-bold text-white mb-2">Email</h3>
-                    <p class="text-gray-300 text-xs break-all">{organizer_email}</p>
-                </div>
-            </div>
-        </div>
-    </section>
-    
-    <!-- RSVP Section -->
-    <section class="py-20 px-6 relative">
-        <div class="absolute inset-0 bg-gradient-to-br from-{palette['secondary']}-950 via-{palette['primary']}-950 to-{palette['accent']}-950"></div>
-        <div class="max-w-3xl mx-auto text-center relative z-10">
-            <h2 class="text-3xl md:text-5xl font-extrabold text-white mb-8 animate-fade-in-up text-shadow">
-                Подтвердите участие
-            </h2>
-            <p class="text-lg text-gray-200 mb-8 animate-fade-in-up" style="animation-delay: 0.2s;">
-                Мы будем рады видеть вас на нашем событии!
-            </p>
-            
-            <div class="glass-effect p-6 rounded-2xl animate-fade-in-up" style="animation-delay: 0.4s;">
-                <form class="space-y-4">
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <input type="text" placeholder="Ваше имя" class="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-300 focus:bg-white/20 focus:border-{palette['primary']}-400 transition-all text-sm">
-                        <input type="email" placeholder="Email" class="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-300 focus:bg-white/20 focus:border-{palette['primary']}-400 transition-all text-sm">
-                    </div>
-                    <select class="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white focus:bg-white/20 focus:border-{palette['primary']}-400 transition-all text-sm">
-                        <option value="">Количество гостей</option>
-                        <option value="1">1 человек</option>
-                        <option value="2">2 человека</option>
-                        <option value="3">3 человека</option>
-                        <option value="4">4+ человек</option>
-                    </select>
-                    <button type="submit" class="w-full py-3 px-6 rounded-lg font-bold text-lg bg-gradient-to-r from-{palette['primary']}-600 to-{palette['secondary']}-600 text-white hover:scale-105 hover:shadow-xl transition-all duration-300">
-                        🎉 Подтвердить участие
-                    </button>
-                </form>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="py-12 bg-gradient-to-r from-slate-900 via-{palette['primary']}-900 to-slate-900 border-t border-white/10 relative">
-        <div class="max-w-4xl mx-auto px-6 text-center relative z-10">
-            <div class="space-y-4">
-                <h3 class="text-2xl font-bold text-white animate-fade-in">
-                    {event_title}
-                </h3>
-                <p class="text-white/80 text-sm font-light animate-fade-in" style="animation-delay: 0.1s;">
-                    Создано с ❤️ и использованием современных технологий
-                </p>
-            </div>
-        </div>
-    </footer>
-
-    <script>
-        // Enhanced animations and interactions - Fixed ResizeObserver issues
-        document.addEventListener('DOMContentLoaded', function() {{
-            // Suppress ResizeObserver loop errors
-            const resizeObserverErr = window.ResizeObserver;
-            window.ResizeObserver = class ResizeObserver extends resizeObserverErr {{
-                constructor(callback) {{
-                    const wrappedCallback = (entries, observer) => {{
-                        window.requestAnimationFrame(() => {{
-                            try {{
-                                callback(entries, observer);
-                            }} catch (e) {{
-                                // Suppress ResizeObserver loop errors
-                                if (e.message && e.message.includes('ResizeObserver loop')) {{
-                                    return;
-                                }}
-                                throw e;
-                            }}
-                        }});
-                    }};
-                    super(wrappedCallback);
-                }}
-            }};
-            
-            // Suppress ResizeObserver errors globally
-            window.addEventListener('error', function(e) {{
-                if (e.message && e.message.includes('ResizeObserver loop')) {{
-                    e.stopImmediatePropagation();
-                    e.preventDefault();
-                    return false;
-                }}
-            }});
-            
-            // Add fade-in animations with proper error handling
-            const observerOptions = {{
-                threshold: 0.1,
-                rootMargin: '50px 0px'
-            }};
-            
-            const observer = new IntersectionObserver((entries) => {{
-                entries.forEach(entry => {{
-                    if (entry.isIntersecting) {{
-                        try {{
-                            entry.target.style.animationPlayState = 'running';
-                            entry.target.style.opacity = '1';
-                        }} catch (e) {{
-                            // Ignore errors
-                        }}
-                    }}
-                }});
-            }}, observerOptions);
-            
-            // Observe all animated elements with error handling
-            try {{
-                document.querySelectorAll('[class*="animate-"]').forEach(el => {{
-                    if (el && el.style !== undefined) {{
-                        observer.observe(el);
-                    }}
-                }});
-            }} catch (e) {{
-                // Ignore observer errors
-            }}
-            
-            // Enhanced button hover effects with error handling
-            try {{
-                document.querySelectorAll('button').forEach(button => {{
-                    button.addEventListener('mouseenter', function() {{
-                        try {{
-                            this.style.transform += ' scale(1.05)';
-                        }} catch (e) {{
-                            // Ignore transform errors
-                        }}
-                    }});
-                    
-                    button.addEventListener('mouseleave', function() {{
-                        try {{
-                            this.style.transform = this.style.transform.replace(' scale(1.05)', '');
-                        }} catch (e) {{
-                            // Ignore transform errors
-                        }}
-                    }});
-                }});
-            }} catch (e) {{
-                // Ignore button errors
-            }}
-        }});
-    </script>
-</body>
-</html>"""
-            
-            return html_template
-            
-        except Exception as e:
-            logger.error(f"Error generating enhanced HTML preview: {e}")
-            return self._create_basic_html_fallback(site_data)
-
-    def _create_basic_html_fallback(self, site_data: GeneratedReactSite) -> str:
-        """Create enhanced HTML fallback with smart color detection"""
-        # Extract user preferences
-        color_preferences = getattr(site_data, 'color_preferences', '') or ''
-        event_type = getattr(site_data, 'event_type', 'birthday')
-        
-        # Smart color scheme detection
-        def get_smart_color_scheme(color_preferences: str, event_type: str) -> str:
-            if not color_preferences:
-                return event_type
-            
-            color_prefs_lower = color_preferences.lower()
-            if any(word in color_prefs_lower for word in ['rose', 'розов', 'pink', 'красн']):
-                return 'wedding'
-            if any(word in color_prefs_lower for word in ['blue', 'син', 'голуб', 'indigo', 'фиолет']):
-                return 'birthday'
-            if any(word in color_prefs_lower for word in ['emerald', 'зелен', 'teal', 'cyan']):
-                return 'anniversary'
-            if any(word in color_prefs_lower for word in ['amber', 'желт', 'золот', 'orange', 'оранж']):
-                return 'graduation'
-            if any(word in color_prefs_lower for word in ['slate', 'сер', 'gray', 'серый']):
-                return 'corporate'
-            
-            return event_type
-        
-        actual_color_scheme = get_smart_color_scheme(color_preferences, event_type)
-        
-        # Color palettes
-        color_palettes = {
-            'wedding': {'primary': 'rose', 'secondary': 'pink', 'hero': 'from-rose-900 via-pink-900 to-purple-900'},
-            'birthday': {'primary': 'blue', 'secondary': 'indigo', 'hero': 'from-blue-900 via-indigo-900 to-purple-900'},
-            'corporate': {'primary': 'slate', 'secondary': 'gray', 'hero': 'from-slate-900 via-gray-900 to-zinc-900'},
-            'anniversary': {'primary': 'emerald', 'secondary': 'teal', 'hero': 'from-emerald-900 via-teal-900 to-cyan-900'},
-            'graduation': {'primary': 'amber', 'secondary': 'orange', 'hero': 'from-amber-900 via-orange-900 to-red-900'}
-        }
-        
-        palette = color_palettes.get(actual_color_scheme, color_palettes['birthday'])
-        
-        return f"""<!DOCTYPE html>
-<html lang="ru" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{site_data.title}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {{
-            theme: {{
-                extend: {{
-                    animation: {{
-                        'float': 'float 6s ease-in-out infinite',
-                        'glow': 'glow 3s ease-in-out infinite alternate',
-                        'fade-in': 'fadeIn 1.2s ease-out'
-                    }},
-                    keyframes: {{
-                        float: {{ 
-                            '0%, 100%': {{ transform: 'translateY(0px)' }}, 
-                            '50%': {{ transform: 'translateY(-20px)' }} 
-                        }},
-                        glow: {{ 
-                            '0%': {{ opacity: '0.4' }}, 
-                            '100%': {{ opacity: '0.8' }} 
-                        }},
-                        fadeIn: {{ 
-                            '0%': {{ opacity: '0', transform: 'translateY(30px)' }}, 
-                            '100%': {{ opacity: '1', transform: 'translateY(0)' }} 
-                        }}
-                    }}
-                }}
-            }}
-        }}
-    </script>
-    <style>
-        .text-shadow {{ text-shadow: 0 4px 8px rgba(0,0,0,0.3); }}
-        .glass-effect {{ 
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }}
-    </style>
-</head>
-<body class="min-h-screen bg-gradient-to-br {palette['hero']} text-white overflow-x-hidden">
-    <div class="relative min-h-screen flex items-center justify-center">
-        <!-- Animated Background -->
-        <div class="absolute inset-0 bg-gradient-conic from-{palette['primary']}-500 via-{palette['secondary']}-500 to-{palette['primary']}-500 opacity-20 animate-spin-slow"></div>
-        <div class="absolute top-20 left-20 w-32 h-32 bg-{palette['primary']}-500/20 rounded-full animate-float blur-sm"></div>
-        <div class="absolute bottom-20 right-20 w-24 h-24 bg-{palette['secondary']}-500/25 rounded-full animate-float" style="animation-delay: 2s;"></div>
-        
-        <!-- Content -->
-        <div class="relative z-10 container mx-auto px-6 text-center">
-            <h1 class="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-{palette['primary']}-200 to-{palette['secondary']}-200 mb-8 animate-fade-in tracking-tight">
-                {site_data.title}
-            </h1>
-            <p class="text-xl md:text-2xl text-gray-200 mb-12 max-w-3xl mx-auto animate-fade-in leading-relaxed" style="animation-delay: 0.3s;">
-                {site_data.meta_description}
-            </p>
-            <button class="px-10 py-5 rounded-3xl font-bold text-xl bg-gradient-to-r from-{palette['primary']}-600 to-{palette['secondary']}-600 text-white hover:scale-110 transition-all duration-500 animate-fade-in shadow-2xl" style="animation-delay: 0.6s;">
-                Узнать больше
-            </button>
-        </div>
+            <!-- Main Content Grid -->
+<div class="grid grid-cols-1 gap-8 mb-12 sm:mb-16">
+  
+  <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift w-full">
+    <div class="flex items-center gap-4 mb-6">
+      <div class="w-12 h-12 icon-gradient bg-gradient-to-r {colors['primary']} rounded-2xl flex items-center justify-center pulse-gentle">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+      <h3 class="text-xl sm:text-2xl font-bold {colors['accent']}">
+        Дата события
+      </h3>
     </div>
-</body>
-</html>"""
+    {calendar_html}
+  </div>
 
-    def _create_v0_inspired_fallback(self, site_data: GeneratedReactSite) -> str:
-        """Create v0.dev inspired React fallback component"""
-        component_name = site_data.component_name
-        title = site_data.title
-        description = site_data.meta_description
-        color_palette = site_data.color_palette
-        animations = site_data.animations
-        
-        # Определяем динамические цвета из palette (если доступны)
-        primary = color_palette.get('primary', 'purple') if isinstance(color_palette, dict) else 'purple'
-        secondary = color_palette.get('secondary', 'pink') if isinstance(color_palette, dict) else 'pink'
-        
-        # V0.dev style template с плейсхолдерами для цветов
-        react_template = """import React, { useState, useCallback } from 'react';
-
-interface Props {}
-
-interface FormData {
-  name: string;
-  email: string;
-  message: string;
-}
-
-interface SectionProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-interface ButtonProps {
-  children: React.ReactNode;
-  onClick?: () => void;
-  type?: 'button' | 'submit';
-  variant?: 'primary' | 'secondary';
-  disabled?: boolean;
-}
-
-// Modern React component with v0.dev patterns
-const Section: React.FC<SectionProps> = ({ children, className = '' }) => (
-  <section className={`py-20 px-6 ${className}`}>
-    <div className="max-w-6xl mx-auto">
-      {children}
+  <!-- Location Card -->
+  <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift w-full">
+    <div class="flex items-center gap-4 mb-6">
+      <div class="w-12 h-12 icon-gradient bg-gradient-to-r {colors['primary']} rounded-2xl flex items-center justify-center pulse-gentle">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </div>
+      <h3 class="text-xl sm:text-2xl font-bold {colors['accent']}">
+        Место проведения
+      </h3>
     </div>
-  </section>
-);
 
-const GlassButton: React.FC<ButtonProps> = ({ 
-  children, 
-  onClick, 
-  type = 'button', 
-  variant = 'primary',
-  disabled = false 
-}) => {
-  const baseClasses = "px-8 py-4 rounded-2xl font-semibold text-lg transition-all duration-300 transform";
-  const variantClasses = variant === 'primary' 
-    ? "bg-gradient-to-r from-PRIMARY-600 to-SECONDARY-600 text-white hover:scale-105 hover:shadow-2xl"
-    : "bg-white/20 backdrop-blur-xl border border-white/30 text-white hover:bg-white/30";
-  
-  return (
-    <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
-      className={`${baseClasses} ${variantClasses} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-    >
-      {children}
-    </button>
-  );
-};
-
-const COMPONENT_NAME: React.FC<Props> = () => {
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
-    email: '',
-    message: ''
-  });
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validation
-    if (!formData.name || !formData.email || !formData.message) {
-      setSubmitStatus('error');
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setSubmitStatus('success');
-      setFormData({ name: '', email: '', message: '' });
-    } catch {
-      setSubmitStatus('error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [formData]);
-  
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setSubmitStatus('idle');
-  }, []);
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Hero Section */}
-      <Section className="min-h-screen flex items-center justify-center text-center relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 bg-gradient-conic from-purple-500 via-pink-500 to-purple-500 opacity-20 animate-spin-slow"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(120,119,198,0.3),transparent_50%)]"></div>
+    <div class="space-y-4">
+      <div class="location-card p-4 rounded-2xl">
+        <p class="text-lg font-semibold {colors['accent']} mb-2">
+          {data.get('location', 'Место уточняется')}
+        </p>
+        {f'<p class="text-sm text-gray-600 mb-4">{data.get("location_address", "")}</p>' if data.get('location_address') else ''}
         
-        <div className="relative z-10 max-w-4xl mx-auto">
-          <h1 className="text-6xl md:text-8xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-purple-200 to-pink-200 mb-8 tracking-tight">
-            TITLE_PLACEHOLDER
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-300 mb-12 leading-relaxed max-w-3xl mx-auto">
-            DESCRIPTION_PLACEHOLDER
-          </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <GlassButton variant="primary">Начать сейчас</GlassButton>
-            <GlassButton variant="secondary">Узнать больше</GlassButton>
+        <div class="map-placeholder h-32 rounded-xl mb-4 relative">
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span class="text-gray-400 text-sm font-medium">Карта загружается...</span>
           </div>
         </div>
-      </Section>
-
-      {/* About Section */}
-      <Section className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 backdrop-blur-xl">
-        <div className="text-center">
-          <h2 className="text-5xl font-bold text-white mb-8">О нас</h2>
-          <p className="text-lg md:text-xl text-gray-300 leading-relaxed max-w-4xl mx-auto">
-            DESCRIPTION_PLACEHOLDER
-          </p>
-        </div>
-      </Section>
-
-      {/* Footer */}
-      <footer className="py-12 bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-t border-white/10">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-          <p className="text-white/60 text-lg">
-            © 2024 TITLE_PLACEHOLDER. Создано с использованием современных технологий
-          </p>
-        </div>
-      </footer>
+        
+        {f'''
+        <a href="https://maps.google.com/?q={data.get('location_address', data.get('location', ''))}" 
+           target="_blank" 
+           class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors font-medium">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+          Открыть в картах
+        </a>
+        ''' if data.get('location') or data.get('location_address') else ''}
+      </div>
     </div>
-  );
-};
+  </div>
+</div>
 
-export default COMPONENT_NAME;"""
 
-        # Safe string replacement (no f-strings)
-        react_code = react_template.replace("COMPONENT_NAME", component_name)
-        react_code = react_code.replace("TITLE_PLACEHOLDER", title)
-        react_code = react_code.replace("DESCRIPTION_PLACEHOLDER", description)
+            
+            <!-- Additional Info Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 sm:mb-16">
+                {f'''
+                <!-- Dress Code Card -->
+                <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 icon-gradient bg-gradient-to-r {colors['primary']} rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold {colors['accent']}">Дресс-код</h3>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed">{data.get('dress_code', 'Свободный стиль')}</p>
+                </div>
+                ''' if data.get('dress_code') else ''}
+                
+                {f'''
+                <!-- Special Notes Card -->
+                <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 icon-gradient bg-gradient-to-r {colors['primary']} rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold {colors['accent']}">Важно знать</h3>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed">{data.get('special_notes', '')}</p>
+                </div>
+                ''' if data.get('special_notes') else ''}
+                
+                {f'''
+                <!-- Gift Info Card -->
+                <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 icon-gradient bg-gradient-to-r {colors['primary']} rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold {colors['accent']}">Подарки</h3>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed">{data.get('gift_info', '')}</p>
+                </div>
+                ''' if data.get('gift_info') else ''}
+                
+                {f'''
+                <!-- Menu Card -->
+                <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 icon-gradient bg-gradient-to-r {colors['primary']} rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold {colors['accent']}">Меню</h3>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed">{data.get('menu_info', '')}</p>
+                </div>
+                ''' if data.get('menu_info') else ''}
+            </div>
+            
+            <!-- RSVP Section -->
+            {rsvp_section}
+            
+            <!-- Contact Section -->
+            {contact_section}
+            
+            <!-- Footer -->
+            <div class="text-center mt-12 sm:mt-16 fade-in">
+                <div class="{theme_styles['card']} {theme_styles['spacing']} max-w-2xl mx-auto">
+                    <div class="flex items-center justify-center gap-4 mb-6">
+                        <div class="w-12 h-12 icon-gradient bg-gradient-to-r {colors['primary']} rounded-full flex items-center justify-center pulse-gentle">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold {colors['accent']}">
+                            Ждём вас!
+                        </h3>
+                    </div>
+                    
+                    <p class="text-gray-600 leading-relaxed mb-6">
+                        {data.get('closing_message', 'Будем рады видеть вас на нашем празднике. Увидимся скоро!')}
+                    </p>
+                    
+                    <div class="inline-flex items-center gap-2 text-sm text-gray-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Создано с любовью
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript для интерактивности -->
+    <script>
+        // Плавная анимация появления элементов
+        const observerOptions = {{
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        }};
         
-        return react_code
+        const observer = new IntersectionObserver((entries) => {{
+            entries.forEach(entry => {{
+                if (entry.isIntersecting) {{
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }}
+            }});
+        }}, observerOptions);
+        
+        // Наблюдаем за элементами с анимацией
+        document.querySelectorAll('.fade-in, .slide-up').forEach(el => {{
+            observer.observe(el);
+        }});
+        
+        // Обработка RSVP кнопок
+        document.querySelectorAll('button').forEach(button => {{
+            button.addEventListener('click', function() {{
+                // Добавляем визуальный фидбек
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {{
+                    this.style.transform = 'scale(1)';
+                }}, 150);
+                
+                // Здесь можно добавить отправку данных на сервер
+                console.log('RSVP clicked:', this.textContent);
+            }});
+        }});
+        
+        // Параллакс эффект для фона
+        window.addEventListener('scroll', () => {{
+            const scrolled = window.pageYOffset;
+            const parallax = document.querySelector('body');
+            const speed = scrolled * 0.5;
+            
+            if (parallax) {{
+                parallax.style.transform = `translateY(${{speed}}px)`;
+            }}
+        }});
+        
+        // Анимация hover для карточек
+        document.querySelectorAll('.hover-lift').forEach(card => {{
+            card.addEventListener('mouseenter', function() {{
+                this.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                this.style.transform = 'translateY(-8px)';
+                this.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.3)';
+            }});
+            
+            card.addEventListener('mouseleave', function() {{
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.25)';
+            }});
+        }});
+        
+        // Имитация загрузки карты
+        setTimeout(() => {{
+            const mapPlaceholder = document.querySelector('.map-placeholder');
+            if (mapPlaceholder) {{
+                mapPlaceholder.innerHTML = `
+                    <div class="h-full w-full bg-gray-100 rounded-xl flex items-center justify-center">
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-gradient-to-r {colors['primary']} rounded-full flex items-center justify-center mx-auto mb-2">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </div>
+                            <p class="text-sm text-gray-600 font-medium">Место проведения</p>
+                        </div>
+                    </div>
+                `;
+            }}
+        }}, 2000);
+    </script>
+</body>
+</html>"""
+        
+        return html
 
-    def _create_react_system_prompt(self) -> str:
-        """Create React-specific system prompt for structure generation"""
-        return """🎯 ТЫ - ГЕНИЙ ДИЗАЙНА И REACT АРХИТЕКТОР!
-
-🚀 КРИТИЧЕСКАЯ МИССИЯ: Создать УНИКАЛЬНУЮ структуру сайта!
-
-⚡ ОБЯЗАТЕЛЬНО:
-- ВСЕГДА учитывай предпочтения пользователя по цветам
-- КАЖДЫЙ сайт должен быть УНИКАЛЬНЫМ (не шаблон!)
-- Создавай креативные, эмоциональные заголовки
-- Используй умную цветовую палитру
-
-📋 ФОРМАТ ОТВЕТА - ТОЛЬКО JSON:
-{
-  "title": "Креативный заголовок (не шаблон!)",
-  "meta_description": "Эмоциональное описание под 160 символов",
-  "component_name": "УникальноеИмяКомпонента",
-  "hero_section": {
-    "title": "Захватывающий заголовок для этого события",
-    "subtitle": "Живое описание с характером",
-    "cta_text": "Активная кнопка действия",
-    "background_type": "gradient_mesh"
-  },
-  "about_section": {
-    "title": "Креативный заголовок раздела",
-    "content": "Богатое, детальное описание"
-  },
-  "color_palette": {
-    "primary": "цвет-на-основе-предпочтений-пользователя",
-    "secondary": "дополнительный-цвет",
-    "accent": "акцентный-цвет"
-  },
-  "theme_config": {
-    "extend": {
-      "animation": {
-        "custom_float": "float 6s ease-in-out infinite"
-      }
-    }
-  },
-  "animations": ["hover:scale-105", "transition-all"],
-  "dependencies": ["react", "@types/react", "tailwindcss"]
-}
-
-🎨 ПРИНЦИПЫ ДИЗАЙНА:
-✅ Glass morphism с backdrop-blur эффектами
-✅ Сложные градиенты и overlays
-✅ Плавные микро-взаимодействия
-✅ Мобильная адаптивность
-✅ Доступность (WCAG)
-
-🔥 МАНДАТ КРЕАТИВНОСТИ:
-- НИ ОДНОГО общего шаблона!
-- КАЖДЫЙ сайт - произведение искусства
-- Цвета должны вызывать правильные эмоции
-- Удивляй инновационными решениями
-
-ВОЗВРАЩАЙ ТОЛЬКО JSON БЕЗ ОБЪЯСНЕНИЙ!"""
-
-    def _create_react_user_prompt(self, request: SiteGenerationRequest) -> str:
-        """Create React-enhanced user prompt (shortened for speed)"""
-        content_json = json.dumps(request.content_details, ensure_ascii=False, indent=2)
-        component_names = {
-            'wedding': 'WeddingLanding',
-            'birthday': 'BirthdayLanding', 
-            'corporate': 'CorporateLanding',
-            'anniversary': 'AnniversaryLanding',
-            'graduation': 'GraduationLanding'
+    def save_to_file(self, html_content: str, filename: str = None) -> str:
+        """Сохраняет HTML в файл и возвращает путь к нему"""
+        if not filename:
+            filename = f"invitation_{uuid.uuid4().hex[:8]}.html"
+        
+        filepath = f"generated_invitations/{filename}"
+        
+        # Создаем директорию если её нет
+        import os
+        os.makedirs("generated_invitations", exist_ok=True)
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        return filepath
+    
+    def generate_preview_url(self, event_json: dict) -> str:
+        """Генерирует предварительный URL для просмотра приглашения"""
+        html_content = self.generate_html(event_json)
+        filename = f"preview_{uuid.uuid4().hex[:8]}.html"
+        filepath = self.save_to_file(html_content, filename)
+        
+        # Возвращаем URL для предварительного просмотра
+        return f"/preview/{filename}"
+    
+    def get_available_themes(self) -> List[str]:
+        """Возвращает список доступных тем"""
+        return list(THEME_STYLES.keys())
+    
+    def get_available_colors(self) -> List[str]:
+        """Возвращает список доступных цветовых схем"""
+        return list(COLOR_GRADIENTS.keys())
+    
+    def validate_event_data(self, event_json: dict) -> Dict[str, Any]:
+        """Валидирует данные события и возвращает ошибки если есть"""
+        errors = {}
+        
+        try:
+            event = EventData.parse_obj(event_json)
+        except Exception as e:
+            errors['validation'] = str(e)
+            return errors
+        
+        # Проверяем обязательные поля
+        content_details = event.content_details
+        
+        if not content_details.get('event_title'):
+            errors['event_title'] = 'Название события обязательно'
+        
+        if not content_details.get('event_date'):
+            errors['event_date'] = 'Дата события обязательна'
+        else:
+            try:
+                datetime.strptime(content_details['event_date'], '%Y-%m-%d')
+            except ValueError:
+                errors['event_date'] = 'Неверный формат даты (требуется YYYY-MM-DD)'
+        
+        if event.theme not in THEME_STYLES:
+            errors['theme'] = f'Неизвестная тема: {event.theme}'
+        
+        if event.color_preferences not in COLOR_GRADIENTS:
+            errors['color_preferences'] = f'Неизвестная цветовая схема: {event.color_preferences}'
+        
+        return errors
+    
+    def get_theme_preview(self, theme: str, color_scheme: str) -> Dict[str, Any]:
+        """Возвращает предварительный просмотр темы и цветовой схемы"""
+        if theme not in THEME_STYLES:
+            theme = "modern"
+        
+        if color_scheme not in COLOR_GRADIENTS:
+            color_scheme = "elegant_neutrals"
+        
+        return {
+            "theme": theme,
+            "color_scheme": color_scheme,
+            "styles": THEME_STYLES[theme],
+            "colors": COLOR_GRADIENTS[color_scheme],
+            "preview_html": self._generate_theme_preview(theme, color_scheme)
         }
-        component_name = component_names.get(request.event_type, 'EventLanding')
-        react_colors = {
-            'wedding': {
-                'hero_gradient': 'bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50',
-                'mesh_overlay': 'bg-gradient-to-br from-rose-400/10 via-pink-400/15 to-purple-400/10',
-                'glass_primary': 'bg-white/20 backdrop-blur-xl border border-white/30',
-                'glass_secondary': 'bg-rose-50/30 backdrop-blur-lg border border-rose-200/40',
-                'button_primary': 'bg-gradient-to-r from-rose-500 to-pink-600',
-                'text_gradient': 'bg-gradient-to-r from-gray-800 via-rose-800 to-purple-800'
-            },
-            'birthday': {
-                'hero_gradient': 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50',
-                'mesh_overlay': 'bg-gradient-to-br from-blue-400/12 via-indigo-400/18 to-purple-400/12',
-                'glass_primary': 'bg-white/25 backdrop-blur-xl border border-white/35',
-                'glass_secondary': 'bg-blue-50/35 backdrop-blur-lg border border-blue-200/45',
-                'button_primary': 'bg-gradient-to-r from-blue-500 to-indigo-600',
-                'text_gradient': 'bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800'
-            },
-            'housewarming': {
-                'hero_gradient': 'bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50',
-                'mesh_overlay': 'bg-gradient-to-br from-emerald-400/10 via-green-400/15 to-teal-400/10',
-                'glass_primary': 'bg-white/20 backdrop-blur-xl border border-white/30',
-                'glass_secondary': 'bg-emerald-50/30 backdrop-blur-lg border border-emerald-200/40',
-                'button_primary': 'bg-gradient-to-r from-emerald-500 to-teal-600',
-                'text_gradient': 'bg-gradient-to-r from-emerald-900 via-green-800 to-teal-800'
-            }
-        }
-        colors = react_colors.get(request.event_type, react_colors['birthday'])
-        return f"""Создай структуру React-лендинга для события типа {request.event_type} с темой {request.theme}.
-
-Требования:
-- Компонент: {component_name}
-- Цветовая палитра: {json.dumps(colors, ensure_ascii=False)}
-- Основные секции: hero, about, features, contact, footer
-- Используй современные подходы React и Tailwind CSS
-- Не добавляй подробные анимации, формы и сложную архитектуру
-- Верни только JSON-структуру сайта без объяснений
-
-Детали события:
-{content_json}
-"""
-
-    def _create_react_fallback_structure(self, request: SiteGenerationRequest) -> GeneratedReactSite:
-        """Create React fallback structure when API fails"""
-        event_title = request.content_details.get('event_title') or 'Ваше событие'
-        description = request.content_details.get('description') or 'Добро пожаловать на наше событие!'
+    
+    def _generate_theme_preview(self, theme: str, color_scheme: str) -> str:
+        """Генерирует HTML для предварительного просмотра темы"""
+        colors = COLOR_GRADIENTS[color_scheme]
+        styles = THEME_STYLES[theme]
         
-        # Log fallback data usage
-        logger.info(f"🔄 FALLBACK: Using user data - Title: {event_title}, Description: {description[:50]}...")
-        
-        component_names = {
-            'wedding': 'WeddingLanding',
-            'birthday': 'BirthdayLanding', 
-            'corporate': 'CorporateLanding',
-            'anniversary': 'AnniversaryLanding',
-            'graduation': 'GraduationLanding'
-        }
-        
-        component_name = component_names.get(request.event_type, 'EventLanding')
-        
-        react_colors = {
-            'wedding': {
-                'hero_gradient': 'bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50',
-                'mesh_overlay': 'bg-gradient-to-br from-rose-400/10 via-pink-400/15 to-purple-400/10',
-                'glass_primary': 'bg-white/20 backdrop-blur-xl border border-white/30',
-                'glass_secondary': 'bg-rose-50/30 backdrop-blur-lg border border-rose-200/40',
-                'button_primary': 'bg-gradient-to-r from-rose-500 to-pink-600',
-                'text_gradient': 'bg-gradient-to-r from-gray-800 via-rose-800 to-purple-800'
+        return f"""
+        <div class="{colors['background']} p-8 rounded-lg">
+            <div class="{styles['card']} {styles['spacing']} text-center">
+                <h2 class="{styles['title']} bg-gradient-to-r {colors['primary']} gradient-text mb-4" style="font-size: 2rem;">
+                    Пример заголовка
+                </h2>
+                <p class="{styles['description']} {colors['accent']} mb-6" style="font-size: 1rem;">
+                    Это пример описания события в выбранной теме и цветовой схеме
+                </p>
+                <button class="{styles['button']} bg-gradient-to-r {colors['primary']} text-white">
+                    Кнопка действия
+                </button>
+            </div>
+        </div>
+        """
+    @staticmethod
+    async def generate_and_save_site(db, user_id, event_json):
+        """
+        Генерирует production-ready React-компонент и HTML-превью, сохраняет оба в базу.
+        """
+        import uuid
+        from ..models.sites import Site
+        from ..schemas.sites import SiteGenerationResponse
+        from sqlalchemy import select
+        from datetime import datetime
+        event = EventData.parse_obj(event_json)
+        # Убедимся, что event_time есть в content_details (если передано)
+        if 'event_time' in event_json.get('content_details', {}):
+            event.content_details['event_time'] = event_json['content_details']['event_time']
+        generator = SiteGeneratorService()
+        react_code = await generator.generate_react_component(event.model_dump())
+        html_code = generator.generate_html(event.model_dump())
+        result = await db.execute(select(Site.slug))
+        existing_slugs = [row[0] for row in result.fetchall()]
+        title = event.content_details.get('event_title', 'untitled')
+        slug = generate_slug(title, existing_slugs)
+        site = Site(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            title=title,
+            slug=slug,
+            meta_description=event_json.get('meta_description', ''),
+            event_type=event.event_type,
+            theme=event.theme,
+            site_structure={
+                "react_component_code": react_code,
+                "event_json": event.model_dump()
             },
-            'birthday': {
-                'hero_gradient': 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50',
-                'mesh_overlay': 'bg-gradient-to-br from-blue-400/12 via-indigo-400/18 to-purple-400/12',
-                'glass_primary': 'bg-white/25 backdrop-blur-xl border border-white/35',
-                'glass_secondary': 'bg-blue-50/35 backdrop-blur-lg border border-blue-200/45',
-                'button_primary': 'bg-gradient-to-r from-blue-500 to-indigo-600',
-                'text_gradient': 'bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800'
-            },
-            'housewarming': {
-                'hero_gradient': 'bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50',
-                'mesh_overlay': 'bg-gradient-to-br from-emerald-400/10 via-green-400/15 to-teal-400/10',
-                'glass_primary': 'bg-white/20 backdrop-blur-xl border border-white/30',
-                'glass_secondary': 'bg-emerald-50/30 backdrop-blur-lg border border-emerald-200/40',
-                'button_primary': 'bg-gradient-to-r from-emerald-500 to-teal-600',
-                'text_gradient': 'bg-gradient-to-r from-emerald-900 via-green-800 to-teal-800'
-            }
-        }
-        
-        colors = react_colors.get(request.event_type, react_colors['birthday'])
-        
-        return GeneratedReactSite(
-            title=event_title,
-            meta_description=description[:160],
-            component_name=component_name,
-            hero_section={
-                "title": event_title,
-                "subtitle": description,
-                "cta_text": "Узнать подробности",
-                "background_type": "mesh_gradient",
-                "animations": ["animate-pulse", "animate-bounce"]
-            },
-            about_section={
-                "title": "О событии",
-                "content": description,
-                "card_style": "glass_morphism",
-                "hover_effects": ["scale", "glow"]
-            },
-            footer_section={
-                "copyright": f"© 2022 {event_title}. Создано с ❤️",
-                "style": "gradient_background"
-            },
-            color_palette=colors,
-            theme_config={
-                "extend": {
-                    "animation": {
-                        "float": "float 6s ease-in-out infinite",
-                        "glow": "glow 2s ease-in-out infinite alternate",
-                        "gradient": "gradient 15s ease infinite"
-                    },
-                    "keyframes": {
-                        "float": {
-                            "0%, 100%": {"transform": "translateY(0px)"},
-                            "50%": {"transform": "translateY(-20px)"}
-                        },
-                        "glow": {
-                            "0%": {"opacity": "0.5"},
-                            "100%": {"opacity": "1"}
-                        }
-                    }
-                }
-            },
-            animations=["hover:scale-105", "transition-all", "group-hover:opacity-100"],
-            dependencies=["react", "@types/react", "tailwindcss"],
-            # Add user preferences
-            event_type=request.event_type,
-            color_preferences=request.color_preferences,
-            style_preferences=request.style_preferences,
-            theme=request.theme,
-            content_details=request.content_details
+            html_content=html_code,
+            content_details=event.model_dump(),
+            color_preferences=event.color_preferences,
+            style_preferences=event_json.get('style_preferences'),
+            target_audience=event_json.get('target_audience'),
+            is_published=False,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            view_count=0,
+            share_count=0
         )
+        db.add(site)
+        await db.commit()
+        await db.refresh(site)
+        # --- Исправление: теперь мы знаем site.id, обновим event_json и html_content ---
+        event_json["id"] = str(site.id)
+        html_code = generator.generate_html(event_json)
+        site.html_content = html_code
+        await db.commit()
+        await db.refresh(site)
+        return SiteGenerationResponse.model_validate(site)
 
 
-# Create singleton instance
-site_generator = SiteGeneratorService() 
+# Пример использования сервиса
+async def example_usage():
+    """Пример использования сервиса генерации приглашений"""
+    
+    service = SiteGeneratorService()
+    
+    # Пример данных события
+    event_data = {
+        "event_type": "wedding",
+        "theme": "elegant",
+        "color_preferences": "romantic_pastels",
+        "content_details": {
+            "event_title": "Свадьба Анны и Михаила",
+            "description": "Приглашаем вас разделить с нами радость этого особенного дня",
+            "event_date": "2024-06-15",
+            "event_time": "16:00",
+            "location": "Ресторан 'Золотая осень'",
+            "location_address": "ул. Пушкина, 25, Москва",
+            "dress_code": "Торжественный стиль",
+            "special_notes": "Церемония начнется в 16:00, просьба не опаздывать",
+            "gift_info": "Лучший подарок - ваше присутствие",
+            "menu_info": "Европейская кухня, вегетарианские блюда по запросу",
+            "closing_message": "С любовью и нетерпением ждём встречи с вами!",
+            "rsvp_enabled": True,
+            "rsvp_options": ["Буду", "Не смогу", "Уточню позже"],
+            "contact_name": "Анна Петрова",
+            "contact_phone": "+7 (999) 123-45-67",
+            "contact_email": "anna.petrova@example.com"
+        }
+    }
+    
+    # Валидация данных
+    errors = service.validate_event_data(event_data)
+    if errors:
+        print("Ошибки валидации:", errors)
+        return
+    
+    # Генерация HTML приглашения
+    html_content = service.generate_html(event_data)
+    
+    # Сохранение в файл
+    filepath = service.save_to_file(html_content)
+    print(f"Приглашение сохранено в: {filepath}")
+    
+    # Генерация React компонента
+    react_component = await service.generate_react_component(event_data)
+    print("React компонент сгенерирован успешно")
+    
+    # Получение превью темы
+    theme_preview = service.get_theme_preview("elegant", "romantic_pastels")
+    print("Превью темы:", theme_preview["theme"])
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(example_usage())
+

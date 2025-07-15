@@ -12,7 +12,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 
 // Lazy loading для оптимизации производительности
 const Index = lazy(() => import("./pages/Index"));
-const Builder = lazy(() => import("./pages/BuilderMVP"));
+const Builder = lazy(() => import("./pages/Builder"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const SiteViewer = lazy(() => import("./pages/SiteViewer"));
 const Pricing = lazy(() => import("./pages/Pricing"));
@@ -74,6 +74,7 @@ const AppContent = () => {
           <Route path="/settings" element={<Settings />} />
           <Route path="/legal" element={<Legal />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/public/:siteId" element={<SiteViewer />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

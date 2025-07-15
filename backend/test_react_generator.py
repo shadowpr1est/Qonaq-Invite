@@ -11,7 +11,7 @@ import os
 # Добавляем путь к src
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from services.site_generator import SiteGeneratorService, SiteGenerationRequest
+from services.site_generator import SiteGeneratorService, EventData
 
 
 async def test_react_generation():
@@ -24,7 +24,7 @@ async def test_react_generation():
     generator = SiteGeneratorService()
     
     # Тестовые данные для свадьбы
-    wedding_request = SiteGenerationRequest(
+    wedding_request = EventData(
         event_type="wedding",
         theme="Романтическая роскошь",
         color_preferences="Розовые и фиолетовые тона",
@@ -42,7 +42,7 @@ async def test_react_generation():
     )
     
     # Тестовые данные для дня рождения
-    birthday_request = SiteGenerationRequest(
+    birthday_request = EventData(
         event_type="birthday",
         theme="Празднование в стиле премиум",
         color_preferences="Синие и индиго тона",
@@ -122,7 +122,7 @@ async def test_multiple_types():
     for case in test_cases:
         print(f"\n🎯 Генерируем {case['type']}...")
         
-        request = SiteGenerationRequest(
+        request = EventData(
             event_type=case["type"],
             theme="Современный премиум",
             content_details={

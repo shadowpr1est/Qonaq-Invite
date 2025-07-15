@@ -49,6 +49,7 @@ class Site(Base):
     # Relationships
     user = relationship("User", back_populates="sites")
     analytics = relationship("SiteAnalytics", back_populates="site", cascade="all, delete-orphan")
+    rsvps = relationship("RSVP", back_populates="site", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Site(id={self.id}, title='{self.title}', user_id={self.user_id})>"
@@ -82,3 +83,18 @@ class SiteAnalytics(Base):
     
     def __repr__(self):
         return f"<SiteAnalytics(id={self.id}, site_id={self.site_id}, event='{self.event_type}')>" 
+
+
+class RSVP(Base):
+    """RSVP responses for events"""
+    __tablename__ = "rsvp"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    site_id = Column(UUID(as_uuid=True), ForeignKey("sites.id", ondelete="CASCADE"), nullable=False)
+    guest_name = Column(String(255), nullable=True)
+    guest_email = Column(String(255), nullable=True)
+    response = Column(String(50), nullable=False)  # attending, not_attending, maybe, etc.
+    comment = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    site = relationship("Site", back_populates="rsvps") 
