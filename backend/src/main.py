@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
-    logger.info("Starting FluentAI backend...")
+    logger.info("Starting InvitlyAI backend...")
     
     # Initialize database
     await init_db()
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app with proper configuration
 app = FastAPI(
-    title="FluentAI API",
+    title="InvitlyAI API",
     description="AI-powered speech analysis and improvement platform",
     version="1.0.0",
     docs_url="/docs" if settings.ENVIRONMENT == "development" else None,
@@ -59,7 +59,7 @@ app.include_router(sites.router, prefix="/sites", tags=["Sites"])
 @app.get("/")
 async def root():
     """Health check endpoint"""
-    return {"message": "FluentAI API is running", "version": "1.0.0"}
+    return {"message": "InvitlyAI API is running", "version": "1.0.0"}
 
 @app.get("/health")
 async def health():

@@ -543,7 +543,7 @@ const Profile = () => {
                                     {siteAnalytics && siteAnalytics.guests && siteAnalytics.guests.length > 0 ? siteAnalytics.guests.map((g: any, i: number) => (
                                       <li key={i}>{g.guest_name || 'Гость'} <span className="text-xs text-gray-500">({g.response})</span></li>
                                     )) : <li className="text-gray-400">—</li>}
-                                  </ul>
+                                    </ul>
                                 </td>
                               </tr>
                             ))}

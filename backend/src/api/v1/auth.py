@@ -1,6 +1,8 @@
 import uuid
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import RedirectResponse, JSONResponse
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
@@ -15,6 +17,8 @@ from src.users.schemas import UserCreate, UserLogin, UserResponse, GoogleOAuthCr
     PasswordResetCodeConfirm
 from src.users.service import UserService
 import logging
+import urllib.parse
+import jwt
 
 # Получаем логгер стандартным способом
 logger = logging.getLogger(__name__)
@@ -547,3 +551,78 @@ async def change_password(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error."
         ) 
+
+@router.get("/google-login-url")
+async def get_google_login_url():
+    """Generate Google OAuth2 login URL for classic redirect flow"""
+    base_url = "https://accounts.google.com/o/oauth2/v2/auth"
+    params = {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "consent",
+    }
+    url = f"{base_url}?{urllib.parse.urlencode(params)}"
+    return {"url": url}
+
+@router.get("/google/callback")
+async def google_oauth_callback(code: str, db: AsyncSession = Depends(get_db)):
+    """Handle Google OAuth2 redirect, exchange code for tokens, get user info, and log in/register user."""
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        "code": code,
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "client_secret": settings.GOOGLE_CLIENT_SECRET,
+        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "grant_type": "authorization_code",
+    }
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(token_url, data=data)
+        if token_resp.status_code != 200:
+            return JSONResponse(status_code=400, content={"error": "Failed to get token from Google", "details": token_resp.text})
+        token_data = token_resp.json()
+        id_token = token_data.get("id_token")
+        access_token = token_data.get("access_token")
+        if not id_token:
+            return JSONResponse(status_code=400, content={"error": "No id_token in response"})
+        # Verify and decode id_token (JWT) with Google's public keys
+        jwks_url = "https://www.googleapis.com/oauth2/v3/certs"
+        jwks_resp = await client.get(jwks_url)
+        jwks = jwks_resp.json()
+        from jwt import PyJWKClient
+        jwk_client = PyJWKClient(jwks_url)
+        signing_key = jwk_client.get_signing_key_from_jwt(id_token).key
+        payload = jwt.decode(id_token, signing_key, algorithms=["RS256"], audience=settings.GOOGLE_CLIENT_ID)
+        email = payload.get("email")
+        name = payload.get("name")
+        google_id = payload.get("sub")
+        avatar = payload.get("picture")
+        if not email or not google_id:
+            return JSONResponse(status_code=400, content={"error": "Missing email or google_id in token"})
+        # Log in or register user
+        user_service = UserService(db)
+        user = await user_service.get_by_google_id(google_id)
+        if not user:
+            user = await user_service.get_by_email(email)
+            if user:
+                user.google_id = google_id
+                user.oauth_provider = "google"
+                user.is_email_verified = True
+                if avatar and not user.avatar:
+                    user.avatar = avatar
+                await db.commit()
+                await db.refresh(user)
+            else:
+                from src.users.schemas import GoogleOAuthCreate
+                user = await user_service.create_oauth_user(GoogleOAuthCreate(email=email, name=name, google_id=google_id, avatar=avatar))
+        # Generate token pair
+        access_token, refresh_token = create_token_pair(user.id)
+        # Set tokens as httpOnly cookies and redirect to frontend
+        from fastapi.responses import RedirectResponse
+        frontend_url = settings.FRONTEND_URL
+        response = RedirectResponse(frontend_url)
+        response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="lax")
+        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="lax")
+        return response 
