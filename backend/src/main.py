@@ -60,6 +60,12 @@ app.include_router(sites.router, prefix="/sites", tags=["Sites"])
 async def root():
     """Health check endpoint"""
     return {"message": "InvitlyAI API is running", "version": "1.0.0"}
+@app.get("/debug/env")
+async def debug_env():
+    return {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect": settings.GOOGLE_REDIRECT_URI
+    }
 
 @app.get("/health")
 async def health():

@@ -21,9 +21,9 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # Note: All tables and columns already created in initial migration
     # This migration is kept for Alembic version tracking
-    pass
+    op.alter_column('users', 'hashed_password', existing_type=sa.String(length=255), nullable=True)
 
 
 def downgrade() -> None:
     # Note: All tables and columns are managed by initial migration
-    pass
+    op.alter_column('users', 'hashed_password', existing_type=sa.String(length=255), nullable=False)

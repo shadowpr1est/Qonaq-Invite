@@ -9,7 +9,6 @@ from src.core.config import settings
 from src.core.security import create_token_pair, get_password_hash
 from src.db.db import get_db
 from src.dependencies.auth import get_current_user
-from src.services.email_service import email_service
 from src.users.models import User as UserModel
 from src.users.schemas import UserCreate, UserLogin, UserResponse, GoogleOAuthCreate, \
     EmailVerificationConfirm, EmailVerificationRequest, ForgotPasswordRequest, ResetPasswordRequest, \
@@ -19,9 +18,14 @@ from src.users.service import UserService
 import logging
 import urllib.parse
 import jwt
+from src.services.email_service import email_service
 
 # Получаем логгер стандартным способом
 logger = logging.getLogger(__name__)
+
+# Логируем client_id и client_secret при старте модуля (один раз)
+logger.info(f"[OAUTH] GOOGLE_CLIENT_ID: {settings.GOOGLE_CLIENT_ID}")
+logger.info(f"[OAUTH] GOOGLE_CLIENT_SECRET: {settings.GOOGLE_CLIENT_SECRET}")
 
 router = APIRouter()
 
@@ -46,7 +50,10 @@ async def register(
         # Create user
         user = await user_service.create_user(user_data)
         
-        # Email verification отключена: ничего не отправляем
+        # Генерируем и отправляем код верификации
+        verification_code = await user_service.generate_email_verification_code(user.email)
+        if verification_code:
+            email_service.send_verification_email(user.email, verification_code)
         
         # Generate token pair
         access_token, refresh_token = create_token_pair(user.id)
@@ -130,6 +137,9 @@ async def google_oauth(
 ):
     """Login or register user with Google OAuth"""
     try:
+        # Логируем client_id и client_secret при каждом вызове
+        logger.info(f"[OAUTH] GOOGLE_CLIENT_ID: {settings.GOOGLE_CLIENT_ID}")
+        logger.info(f"[OAUTH] GOOGLE_CLIENT_SECRET: {settings.GOOGLE_CLIENT_SECRET}")
         user_service = UserService(db)
         
         # Try to find existing user by Google ID first
@@ -185,275 +195,6 @@ async def google_oauth(
         )
 
 
-# ========================================================================
-# EMAIL VERIFICATION WITH 6-DIGIT CODES (NEW)
-# ========================================================================
-
-@router.post("/request-verification-code", response_model=dict)
-async def request_verification_code(
-    request: EmailVerificationCodeRequest,
-    db: AsyncSession = Depends(get_db)
-):
-    """Request new 6-digit verification code"""
-    try:
-        user_service = UserService(db)
-        
-        # Generate new verification code
-        new_code = await user_service.generate_email_verification_code(request.email)
-        
-        if not new_code:
-            # Don't reveal if email exists or is already verified for security
-            return {
-                "message": "If the email exists and is not verified, a new verification code has been sent",
-                "success": True
-            }
-        
-        # Get user to send email
-        user = await user_service.get_by_email(request.email)
-        if user:
-            await email_service.send_verification_code_email(
-                user.email,
-                user.name,
-                new_code
-            )
-        
-        return {
-            "message": "If the email exists and is not verified, a new verification code has been sent",
-            "success": True
-        }
-        
-    except Exception as e:
-        logger.error(f"Request verification code failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
-        )
-
-
-@router.post("/verify-email-code", response_model=dict)
-async def verify_email_code(
-    verification: EmailVerificationCodeConfirm,
-    db: AsyncSession = Depends(get_db)
-):
-    """Verify user email with 6-digit code"""
-    try:
-        user_service = UserService(db)
-        
-        # Verify email with code
-        user = await user_service.verify_email_with_code(verification.email, verification.code)
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired verification code"
-            )
-        
-        # Email verification отключена: не отправляем welcome email
-        
-        logger.info(f"Email verified successfully with code for user: {user.email}")
-        
-        return {
-            "message": "Email verified successfully! Welcome to Invitly! 🎉",
-            "success": True
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Email verification with code failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error during email verification"
-        )
-
-
-# ========================================================================
-# PASSWORD RESET WITH 6-DIGIT CODES (NEW)
-# ========================================================================
-
-@router.post("/request-password-reset-code", response_model=dict)
-async def request_password_reset_code(
-    request: PasswordResetCodeRequest,
-    db: AsyncSession = Depends(get_db)
-):
-    """Request 6-digit code to reset password"""
-    try:
-        user_service = UserService(db)
-        
-        # Generate new password reset code
-        new_code = await user_service.generate_password_reset_code(request.email)
-        
-        if new_code:
-            user = await user_service.get_by_email(request.email)
-            if user:
-                await email_service.send_password_reset_code_email(user.email, user.name, new_code)
-        
-        return {
-            "message": "If your email is in our database, you will receive a password reset code.",
-            "success": True
-        }
-        
-    except Exception as e:
-        logger.error(f"Request password reset code failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
-        )
-
-
-@router.post("/reset-password-with-code", response_model=dict)
-async def reset_password_with_code(
-    request: PasswordResetCodeConfirm,
-    db: AsyncSession = Depends(get_db)
-):
-    """Reset password with 6-digit code and new password"""
-    try:
-        user_service = UserService(db)
-        
-        # Reset password with code
-        success = await user_service.reset_password_with_code(request.email, request.code, request.new_password)
-        
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired password reset code."
-            )
-            
-        logger.info(f"Password reset successfully with code for email: {request.email}")
-            
-        return {
-            "message": "Your password has been reset successfully. You can now log in with your new password.",
-            "success": True
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Password reset with code failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
-        )
-
-
-# ========================================================================
-# LEGACY TOKEN-BASED METHODS (to be deprecated)
-# ========================================================================
-
-@router.post("/verify-email", response_model=dict)
-async def verify_email(
-    verification: EmailVerificationConfirm,
-    db: AsyncSession = Depends(get_db)
-):
-    """Verify user email with token"""
-    try:
-        user_service = UserService(db)
-        user = await user_service.verify_email(verification.token)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired verification token"
-            )
-        
-        await email_service.send_welcome_email(user.email, user.name)
-        
-        logger.info(f"Email verified successfully for user: {user.email}")
-        
-        return {
-            "message": "Email verified successfully! Welcome to Invitly! 🎉",
-            "success": True
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Email verification failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error during email verification"
-        )
-
-@router.post("/resend-verification", response_model=dict)
-async def resend_verification(
-    request: EmailVerificationRequest,
-    db: AsyncSession = Depends(get_db)
-):
-    """Resend email verification token"""
-    try:
-        user_service = UserService(db)
-        user = await user_service.get_by_email(request.email)
-        
-        if not user or user.is_email_verified:
-            # Don't reveal if user exists or is already verified
-            return {"message": "If the email exists and is not verified, a new verification link has been sent"}
-
-        # Generate new verification token and send email
-        verification_token = await user_service.generate_email_verification_token(user.email)
-        await email_service.send_verification_email(user.email, user.name, verification_token)
-        
-        logger.info(f"Resent verification email to: {user.email}")
-        
-        return {"message": "If the email exists and is not verified, a new verification link has been sent"}
-        
-    except Exception as e:
-        logger.error(f"Resend verification failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
-        )
-
-
-@router.post("/forgot-password", response_model=dict)
-async def forgot_password(
-    request: ForgotPasswordRequest,
-    db: AsyncSession = Depends(get_db)
-):
-    """Send password reset email with token"""
-    try:
-        user_service = UserService(db)
-        user = await user_service.get_by_email(request.email)
-        
-        if user:
-            password_reset_token = await user_service.generate_password_reset_token(user.email)
-            await email_service.send_password_reset_email(user.email, user.name, password_reset_token)
-            logger.info(f"Password reset email sent to: {user.email}")
-
-        return {"message": "If your email is in our database, you will receive a password reset link."}
-        
-    except Exception as e:
-        logger.error(f"Forgot password request failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
-        )
-
-
-@router.post("/reset-password", response_model=dict)
-async def reset_password(
-    request: ResetPasswordRequest,
-    db: AsyncSession = Depends(get_db)
-):
-    """Reset password with token"""
-    try:
-        user_service = UserService(db)
-        user = await user_service.reset_password(request.token, request.new_password)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired password reset token."
-            )
-        
-        logger.info(f"Password for {user.email} has been reset successfully.")
-        
-        return {"message": "Your password has been reset successfully. You can now log in with your new password."}
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Password reset failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
-        )
 
 
 # ========================================================================
@@ -555,6 +296,9 @@ async def change_password(
 @router.get("/google-login-url")
 async def get_google_login_url():
     """Generate Google OAuth2 login URL for classic redirect flow"""
+    # Логируем client_id и client_secret при генерации URL
+    logger.info(f"[OAUTH] GOOGLE_CLIENT_ID: {settings.GOOGLE_CLIENT_ID}")
+    logger.info(f"[OAUTH] GOOGLE_CLIENT_SECRET: {settings.GOOGLE_CLIENT_SECRET}")
     base_url = "https://accounts.google.com/o/oauth2/v2/auth"
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
@@ -570,6 +314,9 @@ async def get_google_login_url():
 @router.get("/google/callback")
 async def google_oauth_callback(code: str, db: AsyncSession = Depends(get_db)):
     """Handle Google OAuth2 redirect, exchange code for tokens, get user info, and log in/register user."""
+    # Логируем client_id и client_secret при callback
+    logger.info(f"[OAUTH] GOOGLE_CLIENT_ID: {settings.GOOGLE_CLIENT_ID}")
+    logger.info(f"[OAUTH] GOOGLE_CLIENT_SECRET: {settings.GOOGLE_CLIENT_SECRET}")
     token_url = "https://oauth2.googleapis.com/token"
     data = {
         "code": code,
@@ -619,10 +366,66 @@ async def google_oauth_callback(code: str, db: AsyncSession = Depends(get_db)):
                 user = await user_service.create_oauth_user(GoogleOAuthCreate(email=email, name=name, google_id=google_id, avatar=avatar))
         # Generate token pair
         access_token, refresh_token = create_token_pair(user.id)
-        # Set tokens as httpOnly cookies and redirect to frontend
+        # Set tokens as query params and redirect to frontend
         from fastapi.responses import RedirectResponse
         frontend_url = settings.FRONTEND_URL
-        response = RedirectResponse(frontend_url)
-        response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="lax")
-        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="lax")
+        redirect_url = f"{frontend_url}/login?access_token={access_token}&refresh_token={refresh_token}"
+        response = RedirectResponse(redirect_url)
         return response 
+
+@router.post("/verify-email-code", response_model=UserResponse)
+async def verify_email_code(
+    data: EmailVerificationCodeConfirm,
+    db: AsyncSession = Depends(get_db)
+):
+    """Verify email with 6-digit code"""
+    user_service = UserService(db)
+    user = await user_service.verify_email_with_code(data.email, data.code)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+    return UserResponse(
+        id=str(user.id),
+        email=user.email,
+        name=user.name,
+        avatar=user.avatar,
+        bio=user.bio,
+        is_email_verified=user.is_email_verified
+    )
+
+@router.post("/forgot-password-request")
+async def forgot_password_request(
+    data: PasswordResetCodeRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Send password reset code to email"""
+    user_service = UserService(db)
+    code = await user_service.generate_password_reset_code(data.email)
+    if not code:
+        raise HTTPException(status_code=404, detail="User not found or already requested reset")
+    email_service.send_verification_email(data.email, code)
+    return {"message": "Reset code sent"}
+
+@router.post("/reset-password-with-code")
+async def reset_password_with_code(
+    data: PasswordResetCodeConfirm,
+    db: AsyncSession = Depends(get_db)
+):
+    """Reset password using code"""
+    user_service = UserService(db)
+    ok = await user_service.verify_password_reset_code(data.email, data.code, data.new_password)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+    return {"message": "Password reset successful"} 
+
+@router.post("/resend-verification-code")
+async def resend_verification_code(
+    data: EmailVerificationCodeRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Resend email verification code"""
+    user_service = UserService(db)
+    code = await user_service.generate_email_verification_code(data.email)
+    if not code:
+        raise HTTPException(status_code=404, detail="User not found or already verified")
+    email_service.send_code_email(data.email, code, purpose='verification')
+    return {"message": "Verification code resent"} 

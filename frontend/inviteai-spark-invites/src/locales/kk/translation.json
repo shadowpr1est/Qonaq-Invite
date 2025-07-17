@@ -1,0 +1,15 @@
+{
+  "welcome": "Қош келдіңіз!",
+  "login": "Кіру",
+  "signup": "Тіркелу",
+  "logout": "Шығу",
+  "dashboard": "Басқару панелі",
+  "profile": "Профиль",
+  "settings": "Баптаулар",
+  "language": "Тіл",
+  "email": "Электрондық пошта",
+  "password": "Құпия сөз",
+  "confirm_password": "Құпия сөзді растау",
+  "submit": "Жіберу",
+  "cancel": "Бас тарту"
+} 

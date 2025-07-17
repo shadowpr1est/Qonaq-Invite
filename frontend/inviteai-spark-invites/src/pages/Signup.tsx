@@ -6,20 +6,49 @@ import Loader from '../components/Loader';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 export default function Signup() {
-  const { signup, isLoading, error } = useAuth();
+  const { signup, isLoading, error, verifyEmailCode, resendVerificationEmail } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [wasSubmitted, setWasSubmitted] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationError, setVerificationError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setWasSubmitted(true);
     if (password !== confirm) return;
-    await signup({ name, email, password });
-    navigate('/dashboard');
+    try {
+      await signup({ name, email, password });
+      setShowVerificationModal(true);
+    } catch (e) {
+      // Ошибка уже обработана в useAuth
+    }
+  };
+
+  const handleVerificationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsVerifying(true);
+    setVerificationError('');
+    try {
+      await verifyEmailCode(email, verificationCode);
+      setShowVerificationModal(false);
+      navigate('/dashboard');
+    } catch (e) {
+      setVerificationError('Неверный код подтверждения');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setVerificationCode(value);
+    setVerificationError('');
   };
 
   const handleClassicGoogleLogin = async () => {
@@ -34,7 +63,16 @@ export default function Signup() {
     }
   };
 
-    return (
+  const resendCode = async () => {
+    try {
+      await resendVerificationEmail(email);
+      // Показать уведомление об успешной отправке (можно добавить toast)
+    } catch (error) {
+      setVerificationError('Ошибка при повторной отправке кода');
+    }
+  };
+
+  return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <AuthCanvasBackground />
       <div className="z-10 w-full max-w-md mx-auto p-8 bg-white rounded-2xl shadow-xl flex flex-col items-center animate-fade-in border border-gray-100">
@@ -111,17 +149,79 @@ export default function Signup() {
           {wasSubmitted && error && <div className="text-red-500 text-sm text-center">{error}</div>}
           {wasSubmitted && password !== confirm && <div className="text-red-500 text-xs text-center">Пароли не совпадают</div>}
           <button
-                      type="submit" 
+            type="submit" 
             className="btn btn-primary w-full py-3 rounded-lg font-semibold text-lg bg-indigo-600 hover:bg-indigo-700 text-white transition disabled:opacity-60"
-                      disabled={isLoading}
+            disabled={isLoading}
           >
             {isLoading ? <LoadingSpinner className="mx-auto" /> : 'Зарегистрироваться'}
           </button>
-                </form>
+        </form>
         <div className="flex justify-center w-full mt-4 text-sm">
           <Link to="/login" className="text-gray-600 hover:underline">Уже есть аккаунт? Войти</Link>
-                </div>
+        </div>
       </div>
+
+      {/* Модальное окно для верификации */}
+      {showVerificationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Подтвердите email</h2>
+              <p className="text-gray-600 text-sm">
+                Мы отправили код подтверждения на<br />
+                <span className="font-semibold text-gray-900">{email}</span>
+              </p>
+            </div>
+            
+            <form onSubmit={handleVerificationSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="verification-code" className="block text-sm font-medium text-gray-700 mb-2">
+                  Введите 6-значный код
+                </label>
+                <input
+                  id="verification-code"
+                  type="text"
+                  className="w-full px-4 py-3 text-center text-2xl font-mono rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition bg-white text-gray-900 placeholder-gray-400 tracking-widest"
+                  placeholder="000000"
+                  value={verificationCode}
+                  onChange={handleCodeChange}
+                  maxLength={6}
+                  required
+                  autoComplete="off"
+                  autoFocus
+                />
+              </div>
+              
+              {verificationError && (
+                <div className="text-red-500 text-sm text-center">{verificationError}</div>
+              )}
+              
+              <button
+                type="submit"
+                className="w-full py-3 rounded-lg font-semibold text-lg bg-indigo-600 hover:bg-indigo-700 text-white transition disabled:opacity-60"
+                disabled={isVerifying || verificationCode.length !== 6}
+              >
+                {isVerifying ? <LoadingSpinner className="mx-auto" /> : 'Подтвердить'}
+              </button>
+            </form>
+            
+            <div className="text-center mt-4 text-sm text-gray-600">
+              Не получили код?{' '}
+              <button
+                onClick={resendCode}
+                className="text-indigo-600 hover:text-indigo-700 font-medium"
+              >
+                Отправить повторно
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

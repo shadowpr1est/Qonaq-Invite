@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = Field(default="localhost", env="POSTGRES_HOST")
     POSTGRES_PORT: int = Field(default=5432, env="POSTGRES_PORT")
     POSTGRES_DB: str = Field(env="POSTGRES_DB")
+    FRONTEND_URL: str = Field(env="FRONTEND_URL")
     
     @property
     def DATABASE_URL(self) -> str:
@@ -77,13 +78,6 @@ class Settings(BaseSettings):
     
     # OpenAI Configuration
     OPENAI_API_KEY: str = Field(env="OPENAI_API_KEY")
-    
-    # SMTP Configuration
-    SMTP_HOST: str = Field(default="smtp.gmail.com", env="SMTP_HOST")
-    SMTP_PORT: int = Field(default=587, env="SMTP_PORT")
-    SMTP_EMAIL: str | None = Field(default=None, env="SMTP_EMAIL")
-    SMTP_PASSWORD: str | None = Field(default=None, env="SMTP_PASSWORD")
-    SMTP_FROM_NAME: str = Field(default="Invitly", env="SMTP_FROM_NAME")
     
     # Google OAuth
     GOOGLE_CLIENT_ID: str = Field(env="GOOGLE_CLIENT_ID")

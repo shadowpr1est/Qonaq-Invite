@@ -13,6 +13,31 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { EmailVerificationBanner } from '@/components/EmailVerificationBanner';
+import { useTranslation } from 'react-i18next';
+
+const LanguageSelector = () => {
+  const { i18n } = useTranslation();
+  const current = i18n.language;
+  return (
+    <div className="flex gap-2 items-center ml-4">
+      <button
+        onClick={() => i18n.changeLanguage('kk')}
+        className={`px-2 py-1 rounded text-sm font-medium border ${current === 'kk' ? 'bg-blue-100 border-blue-400' : 'border-gray-200'}`}
+        aria-label="Қазақша"
+      >🇰🇿</button>
+      <button
+        onClick={() => i18n.changeLanguage('ru')}
+        className={`px-2 py-1 rounded text-sm font-medium border ${current === 'ru' ? 'bg-blue-100 border-blue-400' : 'border-gray-200'}`}
+        aria-label="Русский"
+      >🇷🇺</button>
+      <button
+        onClick={() => i18n.changeLanguage('en')}
+        className={`px-2 py-1 rounded text-sm font-medium border ${current === 'en' ? 'bg-blue-100 border-blue-400' : 'border-gray-200'}`}
+        aria-label="English"
+      >🇬🇧</button>
+    </div>
+  );
+};
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);

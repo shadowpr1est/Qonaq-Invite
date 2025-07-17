@@ -30,20 +30,10 @@ OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
 # For local access, use localhost. For production, use your domain.
 PRODUCTION_DOMAIN=localhost
 SERVER_NAME=localhost
-
-# SMTP Settings for sending emails (e.g., verification, password reset)
-# You can use a service like SendGrid, Mailgun, or a simple Gmail account
-# For Gmail, you might need to create an "App Password"
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_EMAIL=your_email@example.com
-SMTP_PASSWORD=your_email_password
-SMTP_FROM_NAME=Invitly Local
 ```
 
 **Важно:**
 - Замените `YOUR_OPENAI_API_KEY_HERE` на ваш реальный ключ от OpenAI.
-- Заполните `SMTP_EMAIL` и `SMTP_PASSWORD`, если вам нужна функция отправки писем. Для локальной разработки это может быть не обязательно.
 
 ## Шаг 2: Сборка и запуск контейнеров
 

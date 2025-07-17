@@ -1,0 +1,15 @@
+{
+  "welcome": "Welcome!",
+  "login": "Login",
+  "signup": "Sign Up",
+  "logout": "Logout",
+  "dashboard": "Dashboard",
+  "profile": "Profile",
+  "settings": "Settings",
+  "language": "Language",
+  "email": "Email",
+  "password": "Password",
+  "confirm_password": "Confirm Password",
+  "submit": "Submit",
+  "cancel": "Cancel"
+} 
