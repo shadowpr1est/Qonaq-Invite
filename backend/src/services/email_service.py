@@ -1,47 +1,59 @@
 import os
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+import logging
+import resend
 
-SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
+logger = logging.getLogger(__name__)
+
+resend.api_key = os.environ.get("RESEND_API_KEY")
 FROM_EMAIL = os.environ.get('MAIL_FROM')
+
+logger.info(f"Email service initialized with Resend. FROM_EMAIL: {FROM_EMAIL}")
+logger.info(f"RESEND_API_KEY present: {bool(resend.api_key)}")
 
 class EmailService:
     @staticmethod
     def send_verification_email(to_email: str, code: str):
-        subject = 'Email Verification Code'
-        html_content = f'<strong>Your verification code: {code}</strong>'
-        message = Mail(
-            from_email=FROM_EMAIL,
-            to_emails=to_email,
-            subject=subject,
-            html_content=html_content
-        )
+        logger.info(f"Attempting to send verification email to: {to_email}")
+        params: resend.Emails.SendParams = {
+            "from": f"Support <{FROM_EMAIL}>",
+            "to": [to_email],
+            "subject": "Email Verification Code",
+            "html": f"<strong>Your verification code: {code}</strong>",
+        }
         try:
-            sg = SendGridAPIClient(SENDGRID_API_KEY)
-            response = sg.send(message)
-            return response.status_code
+            if not resend.api_key:
+                raise RuntimeError("RESEND_API_KEY not set")
+            email = resend.Emails.send(params)
+            logger.info(f"Email sent successfully via Resend. ID: {email.get('id')}")
+            return 200
         except Exception as e:
-            raise RuntimeError(f"SendGrid error: {getattr(e, 'message', str(e))}")
+            logger.error(f"Resend error: {str(e)}")
+            raise RuntimeError(f"Resend error: {str(e)}")
 
     @staticmethod
     def send_code_email(to_email: str, code: str, purpose: str = 'verification'):
+        logger.info(f"Attempting to send {purpose} code email to: {to_email}")
         if purpose == 'verification':
             subject = 'Email Verification Code'
             html_content = f'<strong>Your verification code: {code}</strong>'
         else:
             subject = 'Password Reset Code'
             html_content = f'<strong>Your password reset code: {code}</strong>'
-        message = Mail(
-            from_email=FROM_EMAIL,
-            to_emails=to_email,
-            subject=subject,
-            html_content=html_content
-        )
+        
+        params: resend.Emails.SendParams = {
+            "from": f"Support <{FROM_EMAIL}>",
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content,
+        }
         try:
-            sg = SendGridAPIClient(SENDGRID_API_KEY)
-            response = sg.send(message)
-            return response.status_code
+            if not resend.api_key:
+                raise RuntimeError("RESEND_API_KEY not set")
+            email = resend.Emails.send(params)
+            logger.info(f"Email sent successfully via Resend. ID: {email.get('id')}")
+            return 200
         except Exception as e:
-            raise RuntimeError(f"SendGrid error: {getattr(e, 'message', str(e))}")
+            logger.error(f"Resend error: {str(e)}")
+            raise RuntimeError(f"Resend error: {str(e)}")
 
 email_service = EmailService() 

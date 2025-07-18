@@ -36,4 +36,4 @@ emails==0.6
 python-multipart>=0.0.9
 typing-extensions==4.13.2
 Babel
-sendgrid
+resend
