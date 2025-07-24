@@ -23,6 +23,34 @@ services:
       timeout: 5s
       retries: 5
 
+  # Redis for Celery (Production Ready)
+  redis:
+    image: redis:7-alpine
+    container_name: invitly_redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis_data:/data
+      - redis_logs:/var/log/redis
+    ports:
+      - "6379:6379"
+    networks:
+      - invitly_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+      - /var/tmp
+
   # Frontend React App
   frontend:
     build:
@@ -52,6 +80,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       PRODUCTION_DOMAIN: ${PRODUCTION_DOMAIN}
       JWT_ALGORITHM: RS256
@@ -66,6 +97,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"
     restart: unless-stopped
     healthcheck:
@@ -73,6 +106,73 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # Celery Worker for Site Generation
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: invitly_celery_worker
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      VITE_2GIS_API_KEY: ${VITE_2GIS_API_KEY}
+    volumes:
+      - ./backend/src/keys:/home/app/src/keys:ro
+    networks:
+      - invitly_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A src.core.celery_app worker --loglevel=info --concurrency=2 --queues=site_generation,preview_generation
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "src.core.celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Beat for Scheduled Tasks (optional)
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: invitly_celery_beat
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      VITE_2GIS_API_KEY: ${VITE_2GIS_API_KEY}
+    volumes:
+      - ./backend/src/keys:/home/app/src/keys:ro
+    networks:
+      - invitly_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A src.core.celery_app beat --loglevel=info
+    restart: unless-stopped
 
   # Nginx Reverse Proxy
   nginx:
@@ -87,6 +187,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/ssl/certs:ro
+      - ./nginx/rate_limit_exceeded.html:/etc/nginx/rate_limit_exceeded.html:ro
     environment:
       - SERVER_NAME=${SERVER_NAME:-98.66.137.117}
     networks:
@@ -100,6 +201,8 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
+  redis_logs:
 
 networks:
   invitly_network:

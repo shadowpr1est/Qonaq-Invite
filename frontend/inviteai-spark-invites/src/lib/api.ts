@@ -1,4 +1,6 @@
 import { API_BASE_URL } from './constants';
+import { tokenManager } from './tokenManager';
+import { ErrorHandler } from './errorHandler';
 import type { 
   User, 
   LoginRequest, 
@@ -36,9 +38,10 @@ export interface ApiResponse<T = any> {
 class ApiClient {
   private baseURL: string;
   public authToken: string | null = null;
+  private pendingRequests: Map<string, Promise<any>> = new Map();
 
   constructor() {
-    this.baseURL = API_BASE_URL;
+    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
     this.loadToken();
   }
 
@@ -48,9 +51,10 @@ class ApiClient {
     }
   }
 
-  private getToken(): string | null {
+  private async getToken(): Promise<string | null> {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('access_token');
+      // Автоматически обновляем токен если нужно
+      return await tokenManager.ensureValidToken();
     }
     return this.authToken;
   }
@@ -62,12 +66,15 @@ class ApiClient {
     }
   }
 
+  setTokens(accessToken: string, refreshToken: string) {
+    console.log('Setting tokens in apiClient:', { accessToken: !!accessToken, refreshToken: !!refreshToken });
+    this.authToken = accessToken;
+    tokenManager.setTokens(accessToken, refreshToken);
+  }
+
   removeToken() {
     this.authToken = null;
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-    }
+    tokenManager.clearTokens();
   }
 
   private async request<T>(
@@ -75,17 +82,46 @@ class ApiClient {
     options: RequestInit = {},
     requireAuth: boolean = true
   ): Promise<T> {
+    // Создаем уникальный ключ для запроса
+    const requestKey = `${options.method || 'GET'}:${endpoint}:${JSON.stringify(options.body || '')}`;
+    
+    // Если такой запрос уже выполняется, возвращаем существующий промис
+    if (this.pendingRequests.has(requestKey)) {
+      return this.pendingRequests.get(requestKey)!;
+    }
+
+    // Создаем новый промис для запроса
+    const requestPromise = this._makeRequest<T>(endpoint, options, requireAuth);
+    this.pendingRequests.set(requestKey, requestPromise);
+
+    try {
+      const result = await requestPromise;
+      return result;
+    } finally {
+      // Удаляем запрос из pending после завершения
+      this.pendingRequests.delete(requestKey);
+    }
+  }
+
+  private async _makeRequest<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    requireAuth: boolean = true
+  ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
+    console.log('_makeRequest:', { url, requireAuth, method: options.method });
     
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
 
-    // Always get the latest token from storage
-    const token = this.getToken();
-    if (requireAuth && token) {
-      headers.Authorization = `Bearer ${token}`;
+    if (requireAuth) {
+      const token = await this.getToken();
+      console.log('_makeRequest token:', { hasToken: !!token });
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
 
     const config: RequestInit = {
@@ -94,58 +130,69 @@ class ApiClient {
     };
 
     try {
+      console.log('_makeRequest making fetch to:', url);
       const response = await fetch(url, config);
+      console.log('_makeRequest response status:', response.status);
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({
-          detail: `HTTP ${response.status}: ${response.statusText}`
-        }));
-        
-        throw {
-          status: response.status,
-          message: errorData.detail || errorData.message || 'Network error',
-          data: errorData
+        const errorData = await response.json().catch(() => ({}));
+        console.error('_makeRequest error response:', { status: response.status, data: errorData });
+        const error = {
+          response: {
+            status: response.status,
+            data: errorData
+          }
         };
+        
+        // Handle specific error types
+        if (ErrorHandler.isNetworkError(error)) {
+          throw new Error('Network error');
+        }
+        
+        if (ErrorHandler.isAuthError(error)) {
+          // Handle auth errors - redirect to login
+          this.removeToken();
+          window.location.href = '/login';
+          throw error;
+        }
+        
+        throw error;
       }
 
       const data = await response.json();
+      console.log('_makeRequest success data:', data);
       return data;
-    } catch (error: any) {
-      if (error.status) {
-        throw error;
-      }
-      throw {
-        status: 0,
-        message: 'Network error or server unavailable',
-        data: null
-      };
+    } catch (error) {
+      console.error('_makeRequest catch error:', error);
+      // Re-throw the error for handling by the calling code
+      throw error;
     }
   }
 
   // Authentication Methods
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    return this.request('/auth/login', {
+    return this.request('/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     }, false);
   }
 
   async signup(data: SignupRequest): Promise<AuthResponse> {
-    return this.request('/auth/register', {
+    return this.request('/v1/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     }, false);
   }
 
   async forgotPassword(data: ForgotPasswordRequest): Promise<{ message: string }> {
-    return this.request('/auth/forgot-password', {
+    return this.request('/v1/auth/forgot-password-request', {
       method: 'POST',
       body: JSON.stringify(data),
     }, false);
   }
 
   async resetPassword(data: ResetPasswordRequest): Promise<{ message: string }> {
-    return this.request('/auth/reset-password', {
+    return this.request('/v1/auth/reset-password-with-code', {
       method: 'POST',
       body: JSON.stringify(data),
     }, false);
@@ -153,7 +200,7 @@ class ApiClient {
 
   // Google OAuth
   async googleOAuth(data: GoogleOAuthRequest): Promise<AuthResponse> {
-    return this.request('/auth/google-oauth', {
+    return this.request('/v1/auth/google-oauth', {
       method: 'POST',
       body: JSON.stringify(data),
     }, false);
@@ -161,14 +208,14 @@ class ApiClient {
 
   // Email Verification (Legacy)
   async verifyEmail(token: string): Promise<{ message: string; success: boolean }> {
-    return this.request('/auth/verify-email', {
+    return this.request('/v1/auth/verify-email-code', {
       method: 'POST',
       body: JSON.stringify({ token }),
     }, false);
   }
 
   async resendVerificationEmail(email: string): Promise<{ message: string }> {
-    return this.request('/auth/resend-verification', {
+    return this.request('/v1/auth/resend-verification-code', {
       method: 'POST',
       body: JSON.stringify({ email }),
     }, false);
@@ -180,14 +227,14 @@ class ApiClient {
 
   // Email Verification with 6-digit Code
   async requestVerificationCode(data: EmailVerificationCodeRequest): Promise<{ message: string; success: boolean }> {
-    return this.request('/auth/request-verification-code', {
+    return this.request('/v1/auth/resend-verification-code', {
       method: 'POST',
       body: JSON.stringify(data),
     }, false);
   }
 
   async verifyEmailCode(data: EmailVerificationCodeConfirm): Promise<{ message: string; success: boolean }> {
-    return this.request('/auth/verify-email-code', {
+    return this.request('/v1/auth/verify-email-code', {
       method: 'POST',
       body: JSON.stringify(data),
     }, false);
@@ -195,27 +242,54 @@ class ApiClient {
 
   // Password Reset with 6-digit Code
   async requestPasswordResetCode(data: PasswordResetCodeRequest): Promise<{ message: string; success: boolean }> {
-    return this.request('/auth/request-password-reset-code', {
+    return this.request('/v1/auth/forgot-password-request', {
       method: 'POST',
       body: JSON.stringify(data),
     }, false);
   }
 
   async resetPasswordWithCode(data: PasswordResetCodeConfirm): Promise<{ message: string; success: boolean }> {
-    return this.request('/auth/reset-password-with-code', {
+    return this.request('/v1/auth/reset-password-with-code', {
       method: 'POST',
       body: JSON.stringify(data),
     }, false);
   }
 
   // User Methods
+  private getUserPromise: Promise<User> | null = null;
+  private getUserPromiseTime: number = 0;
+
   async getCurrentUser(): Promise<User> {
-    return this.request('/auth/me');
+    console.log('getCurrentUser called');
+    const now = Date.now();
+    const cacheTime = 5000; // 5 секунд кэш
+
+    // Если есть активный запрос и он не старше 5 секунд, возвращаем его
+    if (this.getUserPromise && (now - this.getUserPromiseTime) < cacheTime) {
+      console.log('Returning cached user promise');
+      return this.getUserPromise;
+    }
+
+    // Создаем новый запрос
+    console.log('Making new user request to /v1/auth/me');
+    this.getUserPromise = this.request('/v1/auth/me');
+    this.getUserPromiseTime = now;
+
+    try {
+      const result = await this.getUserPromise;
+      console.log('getCurrentUser result:', result);
+      return result;
+    } catch (error) {
+      console.error('getCurrentUser error:', error);
+      // Очищаем промис при ошибке
+      this.getUserPromise = null;
+      throw error;
+    }
   }
 
   async updateProfile(data: { name: string; bio?: string }): Promise<{ data?: User; error?: ApiError }> {
     try {
-      const user = await this.request('/auth/profile', {
+      const user = await this.request<User>('/v1/user/profile', {
         method: 'PUT',
         body: JSON.stringify(data),
       });
@@ -227,7 +301,7 @@ class ApiClient {
 
   async changePassword(currentPassword: string, newPassword: string): Promise<{ data?: { message: string }; error?: ApiError }> {
     try {
-      const result = await this.request('/auth/change-password', {
+      const result = await this.request<{ message: string }>('/v1/auth/change-password', {
         method: 'POST',
         body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
       });
@@ -256,9 +330,20 @@ class ApiClient {
     }
   }
 
+  async getSiteStats(siteId: string): Promise<{ data?: any; error?: ApiError }> {
+    try {
+      const response = await this.request(`/v1/sites/${siteId}/stats`, {
+        method: 'GET',
+      });
+      return { data: response };
+    } catch (error: any) {
+      return { error: { detail: error instanceof Error ? error.message : 'Ошибка загрузки статистики сайта' } };
+    }
+  }
+
   // Site Generation Methods
   async generateSite(data: SiteGenerationRequest): Promise<GeneratedSite> {
-    return this.request('/sites/generate', {
+    return this.request('/v1/sites/generate', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -279,7 +364,7 @@ class ApiClient {
           return Promise.reject(new Error("Authentication token is not available."));
       }
 
-      const wsUrl = `${this.baseURL.replace(/^http/, 'ws')}/sites/generation-status/${generationId}?token=${token}`;
+      const wsUrl = `${this.baseURL.replace(/^http/, 'ws')}/v1/sites/generation-status/${generationId}?token=${token}`;
       const ws = new WebSocket(wsUrl);
       
       ws.onmessage = (event) => {
@@ -306,48 +391,48 @@ class ApiClient {
     }
     
     // Make the generation request with generation_id
-    return this.request(`/sites/generate?generation_id=${generationId}`, {
+    return this.request(`/v1/sites/generate?generation_id=${generationId}`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async getUserSites(page: number = 1, limit: number = 10): Promise<UserSitesResponse> {
-    return this.request(`/sites/my-sites?skip=${(page - 1) * limit}&limit=${limit}`);
+    return this.request(`/v1/sites/my-sites?skip=${(page - 1) * limit}&limit=${limit}`);
   }
 
   async getSite(siteId: string): Promise<GeneratedSite> {
-    return this.request(`/sites/${siteId}`);
+    return this.request(`/v1/sites/${siteId}`);
   }
 
   async updateSite(siteId: string, data: SiteUpdate): Promise<GeneratedSite> {
-    return this.request(`/sites/${siteId}`, {
+    return this.request(`/v1/sites/${siteId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
   async deleteSite(siteId: string): Promise<{ message: string }> {
-    return this.request(`/sites/${siteId}`, {
+    return this.request(`/v1/sites/${siteId}`, {
       method: 'DELETE',
     });
   }
 
   async publishSite(siteId: string): Promise<GeneratedSite> {
-    return this.request(`/sites/${siteId}/publish`, {
+    return this.request(`/v1/sites/${siteId}/publish`, {
       method: 'POST',
     });
   }
 
   async unpublishSite(siteId: string): Promise<GeneratedSite> {
-    return this.request(`/sites/${siteId}/unpublish`, {
+    return this.request(`/v1/sites/${siteId}/unpublish`, {
       method: 'POST',
     });
   }
 
   // Analytics Methods
   async trackEvent(data: AnalyticsEvent): Promise<{ success: boolean }> {
-    return this.request('/analytics/track', {
+    return this.request('/v1/analytics/track', {
       method: 'POST',
       body: JSON.stringify(data),
     }, false);
@@ -355,23 +440,23 @@ class ApiClient {
 
   // Generation Status
   async getGenerationStatus(taskId: string): Promise<GenerationStatus> {
-    return this.request(`/generation/status/${taskId}`);
+    return this.request(`/v1/sites/task/${taskId}`);
   }
 
   // Public site access (no auth required)
   async getPublicSite(slug: string): Promise<GeneratedSite> {
-    return this.request(`/public/sites/${slug}`, {}, false);
+    return this.request(`/v1/sites/public/${slug}`, {}, false);
   }
 
   async incrementSiteView(siteId: string): Promise<{ success: boolean }> {
-    return this.request(`/public/sites/${siteId}/view`, {
+    return this.request(`/v1/sites/${siteId}/view`, {
       method: 'POST',
     }, false);
   }
 
   // RSVP
   async sendRSVP(siteId: string, data: { guest_name?: string; guest_email?: string; response: string; comment?: string }): Promise<any> {
-    return this.request(`/sites/${siteId}/rsvp`, {
+    return this.request(`/v1/sites/${siteId}/rsvp`, {
       method: 'POST',
       body: JSON.stringify(data),
     }, false);
@@ -383,7 +468,18 @@ class ApiClient {
   }
 
   isAuthenticated(): boolean {
-    return !!this.authToken;
+    // Проверяем токен в памяти и в localStorage
+    const hasAuthToken = !!this.authToken;
+    const hasLocalToken = typeof window !== 'undefined' && !!localStorage.getItem('access_token');
+    
+    console.log('isAuthenticated check:', { hasAuthToken, hasLocalToken });
+    
+    if (this.authToken) return true;
+    if (typeof window !== 'undefined') {
+      const localToken = localStorage.getItem('access_token');
+      return !!localToken;
+    }
+    return false;
   }
 
   // Helper method for non-JSON requests
@@ -394,8 +490,8 @@ class ApiClient {
   ): Promise<Blob> {
     const url = `${this.baseURL}${endpoint}`;
     
-    const headers: HeadersInit = {
-      ...options.headers,
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string> || {}),
     };
 
     if (requireAuth && this.authToken) {

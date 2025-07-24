@@ -7,6 +7,15 @@ export const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
 // Google OAuth
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
+// Google Maps API
+export const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyB6dAt9XwbM-JNiR1D5CONgbUvT4pQAuDA';
+
+// 2GIS API
+export const TWO_GIS_API_KEY = import.meta.env.VITE_2GIS_API_KEY || '';
+
+// Debug: Log API key status
+console.log('🔑 2GIS API Key Status:', TWO_GIS_API_KEY ? 'Present' : 'Missing');
+
 
 // App Information
 export const APP_NAME = import.meta.env.VITE_APP_NAME || 'InvitlyAI';
@@ -24,16 +33,16 @@ export const STORAGE_KEYS = {
 // API Endpoints - synchronized with backend
 export const API_ENDPOINTS = {
   AUTH: {
-    LOGIN: '/auth/login',
-    REGISTER: '/auth/register',
-    LOGOUT: '/auth/logout',
-    REFRESH: '/auth/refresh',
-    PROFILE: '/auth/profile',
+      LOGIN: '/v1/auth/login',
+  REGISTER: '/v1/auth/register',
+  LOGOUT: '/v1/auth/logout',
+  REFRESH: '/v1/auth/refresh',
+  PROFILE: '/v1/user/profile',
   },
   USER: {
-    PROFILE: '/user/profile',
-    UPDATE_PROFILE: '/user/profile',
-    CHANGE_PASSWORD: '/user/change-password',
+    PROFILE: '/v1/user/profile',
+    UPDATE_PROFILE: '/v1/user/profile',
+    CHANGE_PASSWORD: '/v1/user/change-password',
   },
 } as const;
 

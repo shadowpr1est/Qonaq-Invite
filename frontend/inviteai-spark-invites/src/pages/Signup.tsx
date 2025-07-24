@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/use-auth';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthCanvasBackground from '../components/AuthCanvasBackground';
 import Loader from '../components/Loader';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useTranslation } from 'react-i18next';
+import { ErrorHandler } from '@/lib/errorHandler';
+import { apiClient } from '@/lib/api';
 
 export default function Signup() {
-  const { signup, isLoading, error, verifyEmailCode, resendVerificationEmail } = useAuth();
+  const { signup, isLoading, error, verifyEmailCode, resendVerificationEmail, setUser, user, isInitialized } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +20,23 @@ export default function Signup() {
   const [verificationError, setVerificationError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  // Redirect if already authenticated - but only if user came from specific pages
+  useEffect(() => {
+    if (isInitialized && user) {
+      // Check if user came from a specific page that requires dashboard redirect
+      const fromPage = new URLSearchParams(window.location.search).get('from');
+      if (fromPage === 'dashboard' || fromPage === 'builder') {
+      navigate('/dashboard');
+      } else {
+        // Otherwise, let user stay on current page or go to home
+        navigate('/');
+      }
+    }
+  }, [user, isInitialized, navigate]);
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,8 +45,9 @@ export default function Signup() {
     try {
       await signup({ name, email, password });
       setShowVerificationModal(true);
-    } catch (e) {
-      // Ошибка уже обработана в useAuth
+    } catch (error) {
+      // Error is already handled by the auth hook
+      console.error('Signup failed:', error);
     }
   };
 
@@ -37,9 +58,17 @@ export default function Signup() {
     try {
       await verifyEmailCode(email, verificationCode);
       setShowVerificationModal(false);
+      // Check if user came from a specific page that requires dashboard redirect
+      const fromPage = new URLSearchParams(window.location.search).get('from');
+      if (fromPage === 'dashboard' || fromPage === 'builder') {
       navigate('/dashboard');
-    } catch (e) {
-      setVerificationError('Неверный код подтверждения');
+      } else {
+        // Otherwise, let user stay on current page or go to home
+        navigate('/');
+      }
+    } catch (error) {
+      const errorMessage = ErrorHandler.handleAuthError(error, t, false);
+      setVerificationError(errorMessage);
     } finally {
       setIsVerifying(false);
     }
@@ -53,13 +82,16 @@ export default function Signup() {
 
   const handleClassicGoogleLogin = async () => {
     try {
-      const resp = await fetch(`${import.meta.env.VITE_API_URL}/auth/google-login-url`);
+      // Сохраняем текущий язык в URL для восстановления после OAuth
+      const currentLang = localStorage.getItem('language') || 'ru';
+      const fromPage = new URLSearchParams(window.location.search).get('from');
+      const resp = await fetch(`${import.meta.env.VITE_API_URL}/v1/auth/google-login-url?lang=${currentLang}&from=${fromPage || ''}`);
       const data = await resp.json();
       if (data.url) {
         window.location.href = data.url;
       }
     } catch (e) {
-      alert('Ошибка Google OAuth: не удалось получить ссылку регистрации.');
+      ErrorHandler.handleNetworkError(e, t);
     }
   };
 
@@ -68,9 +100,19 @@ export default function Signup() {
       await resendVerificationEmail(email);
       // Показать уведомление об успешной отправке (можно добавить toast)
     } catch (error) {
-      setVerificationError('Ошибка при повторной отправке кода');
+      const errorMessage = ErrorHandler.handleAuthError(error, t, false);
+      setVerificationError(errorMessage);
     }
   };
+
+  // Don't render if user is already authenticated
+  if (!isInitialized) {
+    return <Loader />;
+  }
+
+  if (user) {
+    return <Loader />; // Will redirect to dashboard
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
@@ -87,7 +129,7 @@ export default function Signup() {
           </span>
         </Link>
         {/* <Link to="/" className="mb-4 text-sm text-gray-400 hover:text-indigo-500 transition-colors">← На главную</Link> */}
-        <h1 className="text-3xl font-bold mb-2 text-gray-900">Регистрация</h1>
+        <h1 className="text-3xl font-bold mb-2 text-gray-900">{t('auth.signup.title')}</h1>
         <div className="w-full flex flex-col gap-2 mb-4">
           <button
             type="button"
@@ -102,11 +144,11 @@ export default function Signup() {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
-            <span>Зарегистрироваться через Google</span>
+            <span>{t('auth.signup.continue_with_google')}</span>
           </button>
           <div className="flex items-center my-2">
             <div className="flex-grow h-px bg-gray-200" />
-            <span className="mx-2 text-gray-400 text-xs">или</span>
+            <span className="mx-2 text-gray-400 text-xs">{t('auth.signup.or')}</span>
             <div className="flex-grow h-px bg-gray-200" />
           </div>
         </div>
@@ -115,7 +157,7 @@ export default function Signup() {
           <input
             type="text"
             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition bg-white text-gray-900 placeholder-gray-400"
-            placeholder="Имя"
+            placeholder={t('auth.signup.full_name')}
             value={name}
             onChange={e => setName(e.target.value)}
             required
@@ -123,7 +165,7 @@ export default function Signup() {
           <input
             type="email"
             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition bg-white text-gray-900 placeholder-gray-400"
-            placeholder="Email"
+            placeholder={t('auth.signup.email')}
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
@@ -131,7 +173,7 @@ export default function Signup() {
           <input
             type="password"
             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition bg-white text-gray-900 placeholder-gray-400"
-            placeholder="Пароль"
+            placeholder={t('auth.signup.password')}
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
@@ -140,24 +182,24 @@ export default function Signup() {
           <input
             type="password"
             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition bg-white text-gray-900 placeholder-gray-400"
-            placeholder="Повторите пароль"
+            placeholder={t('auth.signup.confirm_password')}
             value={confirm}
             onChange={e => setConfirm(e.target.value)}
             required
             minLength={8}
           />
           {wasSubmitted && error && <div className="text-red-500 text-sm text-center">{error}</div>}
-          {wasSubmitted && password !== confirm && <div className="text-red-500 text-xs text-center">Пароли не совпадают</div>}
+          {wasSubmitted && password !== confirm && <div className="text-red-500 text-xs text-center">{t('auth.signup.errors.passwords_not_match')}</div>}
           <button
             type="submit" 
             className="btn btn-primary w-full py-3 rounded-lg font-semibold text-lg bg-indigo-600 hover:bg-indigo-700 text-white transition disabled:opacity-60"
             disabled={isLoading}
           >
-            {isLoading ? <LoadingSpinner className="mx-auto" /> : 'Зарегистрироваться'}
+            {isLoading ? <LoadingSpinner size="sm" className="mx-auto" /> : t('auth.signup.signup_button')}
           </button>
         </form>
         <div className="flex justify-center w-full mt-4 text-sm">
-          <Link to="/login" className="text-gray-600 hover:underline">Уже есть аккаунт? Войти</Link>
+          <Link to="/login" className="text-gray-600 hover:underline">{t('auth.signup.have_account')} {t('auth.signup.login_link')}</Link>
         </div>
       </div>
 
@@ -171,7 +213,7 @@ export default function Signup() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Подтвердите email</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('auth.verify_email.title')}</h2>
               <p className="text-gray-600 text-sm">
                 Мы отправили код подтверждения на<br />
                 <span className="font-semibold text-gray-900">{email}</span>
@@ -181,7 +223,7 @@ export default function Signup() {
             <form onSubmit={handleVerificationSubmit} className="space-y-4">
               <div>
                 <label htmlFor="verification-code" className="block text-sm font-medium text-gray-700 mb-2">
-                  Введите 6-значный код
+                  {t('auth.verify_email.code')}
                 </label>
                 <input
                   id="verification-code"

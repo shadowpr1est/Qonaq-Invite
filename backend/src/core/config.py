@@ -9,7 +9,11 @@ class Settings(BaseSettings):
     """Application settings following FastAPI best practices"""
     
     model_config = SettingsConfigDict(
-        env_file=str(Path(__file__).parent.parent.parent / ".env"),
+        env_file=[
+            os.path.join(os.getcwd(), ".env"),
+            str(Path(__file__).parent.parent.parent / ".env"),
+            str(Path(__file__).parent.parent / ".env"),
+        ],
         extra="ignore"
     )
     
@@ -32,10 +36,30 @@ class Settings(BaseSettings):
         """Construct database URL from .env parameters"""
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
     
+    # Redis Configuration для Celery
+    REDIS_HOST: str = Field(default="localhost", env="REDIS_HOST")
+    REDIS_PORT: int = Field(default=6379, env="REDIS_PORT")
+    REDIS_DB: int = Field(default=0, env="REDIS_DB")
+    REDIS_PASSWORD: str = Field(default="", env="REDIS_PASSWORD")
+    
+    @property
+    def REDIS_URL(self) -> str:
+        """Construct Redis URL for Celery"""
+        if self.REDIS_PASSWORD:
+            return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+    
+    @property
+    def REDIS_URL_WITH_PASSWORD(self) -> str:
+        """Construct Redis URL with password for direct connections"""
+        if self.REDIS_PASSWORD:
+            return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+    
     # JWT Configuration (из .env)
     JWT_ALGORITHM: str = Field(default="RS256", env="JWT_ALGORITHM")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, env="JWT_ACCESS_TOKEN_EXPIRE_MINUTES")
-    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7, env="JWT_REFRESH_TOKEN_EXPIRE_DAYS")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=1440, env="JWT_ACCESS_TOKEN_EXPIRE_MINUTES")  # 24 часа
+    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=30, env="JWT_REFRESH_TOKEN_EXPIRE_DAYS")  # 30 дней
     
     # RSA Key Paths
     PRIVATE_KEY_PATH: str = Field(
@@ -83,6 +107,13 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = Field(env="GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = Field(env="GOOGLE_CLIENT_SECRET")
     GOOGLE_REDIRECT_URI: str = Field(env="GOOGLE_REDIRECT_URI")
+    
+    # Email Configuration
+    RESEND_API_KEY: str = Field(env="RESEND_API_KEY")
+    MAIL_FROM: str = Field(env="MAIL_FROM")
+    
+    # 2GIS API Configuration
+    TWO_GIS_API_KEY: str = Field(default_factory=lambda: os.getenv('VITE_2GIS_API_KEY', ''), env='VITE_2GIS_API_KEY')
     
     @property
     def private_key(self) -> str:

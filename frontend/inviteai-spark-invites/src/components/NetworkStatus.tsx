@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Alert, AlertDescription } from './ui/alert';
 import { Wifi, WifiOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const NetworkStatus: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showOfflineAlert, setShowOfflineAlert] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const handleOnline = () => {
@@ -18,8 +20,10 @@ export const NetworkStatus: React.FC = () => {
       setShowOfflineAlert(true);
     };
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+    }
 
     // Показываем уведомление сразу если офлайн
     if (!navigator.onLine) {
@@ -44,7 +48,7 @@ export const NetworkStatus: React.FC = () => {
           <Alert variant="destructive" className="border-orange-200 bg-orange-50">
             <WifiOff className="h-4 w-4" />
             <AlertDescription className="text-orange-800 flex items-center gap-2">
-              <span>Нет подключения к интернету</span>
+                              <span>{t('network_status.offline_message')}</span>
               {isOnline && (
                 <motion.div
                   initial={{ scale: 0 }}

@@ -111,10 +111,45 @@
 
   body {
     @apply bg-background text-foreground font-body;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+
+  /* Improved typography for better readability */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-bold tracking-tight;
+    line-height: 1.1;
+  }
+
+  /* Ensure proper contrast ratios */
+  .text-gray-600 {
+    color: hsl(215, 16%, 47%);
+  }
+
+  .text-gray-700 {
+    color: hsl(215, 19%, 35%);
+  }
+
+  .text-gray-900 {
+    color: hsl(215, 28%, 17%);
+  }
+
+  /* Focus styles for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-indigo-500 ring-offset-2;
+  }
+
+  /* Button focus styles */
+  button:focus-visible,
+  a:focus-visible {
+    @apply outline-none ring-2 ring-indigo-500 ring-offset-2 ring-offset-white;
   }
 }
 
@@ -162,6 +197,34 @@
     height: 300px;
   }
 
+  /* Container utilities for consistent spacing */
+  .container-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+
+  .container-max-width {
+    @apply max-w-7xl mx-auto;
+  }
+
+  /* Improved button styles */
+  .btn-primary {
+    @apply bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105;
+  }
+
+  .btn-secondary {
+    @apply font-semibold border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 hover:text-gray-900 transition-all duration-200;
+  }
+
+  /* Improved link styles */
+  .link-hover {
+    @apply relative group;
+  }
+
+  .link-hover::after {
+    content: '';
+    @apply absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-200 group-hover:w-full;
+  }
+
   /* Respect prefers-reduced-motion */
   @media (prefers-reduced-motion: reduce) {
     .animate-path-draw,
@@ -202,5 +265,55 @@
 
   .animate-shimmer {
     animation: shimmer 2s infinite;
+  }
+
+  /* Improved mobile responsiveness */
+  @media (max-width: 640px) {
+    .container-padding {
+      @apply px-4;
+    }
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .text-gray-600 {
+      color: hsl(215, 16%, 30%);
+    }
+    
+    .text-gray-700 {
+      color: hsl(215, 19%, 20%);
+    }
+    
+    .border-gray-200 {
+      border-color: hsl(215, 16%, 30%);
+    }
+  }
+
+  /* Print styles */
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+    
+    body {
+      background: white !important;
+      color: black !important;
+    }
+  }
+
+  /* Gradient animation */
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 3s ease infinite;
+  }
+  
+  .shadow-3xl {
+    box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.25);
   }
 }

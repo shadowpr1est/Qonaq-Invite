@@ -20,10 +20,18 @@ pydantic==2.10.4
 pydantic-settings==2.10.1
 python-dotenv==1.0.1
 
+# Rate Limiting
+slowapi==0.1.9
+
 # OpenAI and HTTP client
 # Using specific versions known to be compatible to resolve dependency conflicts
 openai>=1.23.0
 httpx>=0.27.0
+aiohttp>=3.9.0
+
+# Background Tasks & Queue
+celery[redis]==5.5.3
+redis==5.2.1
 
 # Development and Testing
 pytest==7.4.0

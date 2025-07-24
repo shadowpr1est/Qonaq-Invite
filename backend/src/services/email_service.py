@@ -1,11 +1,13 @@
 import os
 import logging
 import resend
+from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 
-resend.api_key = os.environ.get("RESEND_API_KEY")
-FROM_EMAIL = os.environ.get('MAIL_FROM')
+# Используем настройки из config.py
+resend.api_key = settings.RESEND_API_KEY
+FROM_EMAIL = settings.MAIL_FROM
 
 logger.info(f"Email service initialized with Resend. FROM_EMAIL: {FROM_EMAIL}")
 logger.info(f"RESEND_API_KEY present: {bool(resend.api_key)}")

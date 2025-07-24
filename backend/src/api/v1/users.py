@@ -10,7 +10,7 @@ from src.db.db import get_db
 from src.dependencies.auth import get_current_user
 from src.users.models import User as UserModel
 from src.users.schemas import UserResponse, UserUpdate, ChangePasswordRequest, ApiResponse, UserStats
-from src.core.exceptions import ValidationError, AuthenticationError
+from src.core.exceptions import LocalizedHTTPException, ErrorCode, raise_internal_server_error
 from src.core.security import verify_password, get_password_hash
 
 import random
@@ -74,13 +74,7 @@ async def update_user_profile(
     except Exception as e:
         await db.rollback()
         logger.error(f"Failed to update profile for user {current_user.id}: {str(e)}")
-        raise ValidationError(
-            detail="Failed to update profile",
-            suggestions=[
-                "Check that all field lengths are within limits",
-                "Try again with valid data"
-            ]
-        )
+        raise_internal_server_error()
 
 
 @router.post("/change-password", response_model=ApiResponse)
@@ -97,7 +91,10 @@ async def change_password(
     try:
         # Verify current password
         if not verify_password(password_data.currentPassword, current_user.hashed_password):
-            raise AuthenticationError("Current password is incorrect")
+            raise LocalizedHTTPException(
+                error_code=ErrorCode.INVALID_PASSWORD,
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
         
         # Update password
         current_user.hashed_password = get_password_hash(password_data.newPassword)
@@ -112,18 +109,10 @@ async def change_password(
             success=True
         )
         
-    except AuthenticationError:
-        raise
     except Exception as e:
         await db.rollback()
         logger.error(f"Failed to change password for user {current_user.id}: {str(e)}")
-        raise ValidationError(
-            detail="Failed to change password",
-            suggestions=[
-                "Ensure your new password meets security requirements (min 8 characters)",
-                "Try again with a different password"
-            ]
-        )
+        raise_internal_server_error()
 
 
 @router.get("/stats", response_model=UserStats)
@@ -174,11 +163,4 @@ async def get_user_stats(
         
     except Exception as e:
         logger.error(f"Failed to get stats for user {current_user.id}: {str(e)}")
-        raise ValidationError(
-            detail="Failed to retrieve user statistics",
-            suggestions=[
-                "Try refreshing the page",
-                "Check your internet connection",
-                "Contact support if the problem persists"
-            ]
-        ) 
+        raise_internal_server_error() 

@@ -23,16 +23,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { getErrorMessage, getErrorSuggestion } from '../lib/utils';
-
-const resetPasswordSchema = z.object({
-  newPassword: z.string().min(8, 'Пароль должен содержать минимум 8 символов'),
-  confirmPassword: z.string(),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: 'Пароли не совпадают',
-  path: ['confirmPassword'],
-});
-
-type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
+import { useTranslation } from 'react-i18next';
 
 const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -43,8 +34,19 @@ const ResetPassword: React.FC = () => {
   const [errorSuggestion, setErrorSuggestion] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { t } = useTranslation();
   
   const token = searchParams.get('token');
+
+  const resetPasswordSchema = z.object({
+    newPassword: z.string().min(8, t('auth.reset_password.errors.password_min_length')),
+    confirmPassword: z.string(),
+  }).refine((data) => data.newPassword === data.confirmPassword, {
+    message: t('auth.reset_password.errors.passwords_not_match'),
+    path: ['confirmPassword'],
+  });
+
+  type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
 
   const {
     register,
@@ -69,7 +71,7 @@ const ResetPassword: React.FC = () => {
     setErrorSuggestion(null);
 
     try {
-      const response = await apiClient.post('/auth/reset-password', {
+      const response = await apiClient.post('/v1/auth/reset-password-with-code', {
         token,
         new_password: data.newPassword,
       }, false);
@@ -207,10 +209,10 @@ const ResetPassword: React.FC = () => {
               <Shield className="w-8 h-8 text-white" />
             </motion.div>
             <CardTitle className="text-3xl font-bold">
-              Новый пароль 🔐
+              {t('auth.reset_password.title')} 🔐
             </CardTitle>
             <CardDescription className="text-indigo-100 text-base">
-              Введите новый пароль для вашего аккаунта
+              {t('auth.reset_password.subtitle')}
             </CardDescription>
           </CardHeader>
           
@@ -248,7 +250,7 @@ const ResetPassword: React.FC = () => {
               >
                 <Label htmlFor="newPassword" className="text-base font-semibold text-gray-700 flex items-center gap-2">
                   <Lock className="w-4 h-4 text-indigo-600" />
-                  Новый пароль
+                  {t('auth.reset_password.new_password')}
                 </Label>
                 <div className="relative">
                   <Input
@@ -288,7 +290,7 @@ const ResetPassword: React.FC = () => {
               >
                 <Label htmlFor="confirmPassword" className="text-base font-semibold text-gray-700 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-indigo-600" />
-                  Подтвердите пароль
+                  {t('auth.reset_password.confirm_password')}
                 </Label>
                 <div className="relative">
                   <Input
@@ -334,12 +336,12 @@ const ResetPassword: React.FC = () => {
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Сохраняем...
+                      {t('common.loading')}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <Lock className="h-4 w-4" />
-                      Установить новый пароль
+                      {t('auth.reset_password.reset_button')}
                     </div>
                   )}
                 </Button>
@@ -358,7 +360,7 @@ const ResetPassword: React.FC = () => {
                 </div>
                 <div className="relative flex justify-center text-sm">
                   <span className="px-4 bg-white text-gray-500 font-medium">
-                    Помните пароль?
+                    {t('auth.reset_password.back_to_login')}
                   </span>
                 </div>
               </div>
@@ -367,7 +369,7 @@ const ResetPassword: React.FC = () => {
                 <Button asChild variant="outline" className="w-full h-12 text-base font-medium border-2 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200">
                   <Link to="/login" className="inline-flex items-center gap-2">
                     <ArrowLeft className="h-4 w-4" />
-                    Вернуться к входу
+                    {t('auth.reset_password.back_to_login')}
                   </Link>
                 </Button>
               </div>
@@ -378,6 +380,4 @@ const ResetPassword: React.FC = () => {
       </div>
     </MainLayout>
   );
-};
-
-export default ResetPassword; 
+}; 

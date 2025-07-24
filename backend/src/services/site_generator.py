@@ -1,7 +1,8 @@
 import json
 import uuid
 import calendar
-from typing import List, Dict, Any, Optional
+import aiohttp
+from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 from pydantic import BaseModel, Field
 from openai import AsyncOpenAI
@@ -53,6 +54,12 @@ COLOR_GRADIENTS = {
         "secondary": "from-purple-50 to-pink-50",
         "accent": "text-purple-700",
         "background": "bg-gradient-to-br from-purple-50 via-pink-50 to-red-50"
+    },
+    "bold_modern": {
+        "primary": "from-indigo-500 via-violet-500 to-purple-700",
+        "secondary": "from-indigo-50 to-violet-50",
+        "accent": "text-indigo-700",
+        "background": "bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-50"
     },
     "spring_fresh": {
         "primary": "from-lime-600 via-green-600 to-emerald-600",
@@ -132,10 +139,17 @@ Follow these strict requirements:
 - Never include imports, exports, or function declarations
 - Make components interactive and engaging"""
 
+import os
+
 class SiteGeneratorService:
     def __init__(self):
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = "gpt-4o"
+        # Загружаем API ключ из settings, если не найден - из os.environ
+        self.two_gis_api_key = getattr(settings, 'TWO_GIS_API_KEY', '') or os.getenv('VITE_2GIS_API_KEY', '')
+        print(f"[INIT] TWO_GIS_API_KEY из settings: {getattr(settings, 'TWO_GIS_API_KEY', '')[:10] if getattr(settings, 'TWO_GIS_API_KEY', '') else 'НЕ НАЙДЕН'}...")
+        print(f"[INIT] TWO_GIS_API_KEY из os.environ: {os.getenv('VITE_2GIS_API_KEY', '')[:10] if os.getenv('VITE_2GIS_API_KEY', '') else 'НЕ НАЙДЕН'}...")
+        print(f"[INIT] Итоговый API ключ: {self.two_gis_api_key[:10] if self.two_gis_api_key else 'НЕ НАЙДЕН'}...")
     
     def _get_color_scheme(self, color_preference: str) -> Dict[str, str]:
         """Получает цветовую схему по предпочтению пользователя"""
@@ -144,6 +158,141 @@ class SiteGeneratorService:
     def _get_theme_styles(self, theme: str) -> Dict[str, str]:
         """Получает стили темы по предпочтению пользователя"""
         return THEME_STYLES.get(theme, THEME_STYLES["modern"])
+    
+    async def _geocode_address(self, address: str) -> Optional[Dict[str, Any]]:
+        """
+        Геокодирует адрес через 2GIS API
+        Возвращает координаты и информацию о месте
+        """
+        print(f"[GEOCODE] Начинаем геокодирование адреса: '{address}'")
+        print(f"[GEOCODE] API ключ: {self.two_gis_api_key[:10] if self.two_gis_api_key else 'НЕ НАЙДЕН'}...")
+        
+        if not self.two_gis_api_key:
+            print("[GEOCODE] ❌ API ключ не найден")
+            return None
+        
+        if not address.strip():
+            print("[GEOCODE] ❌ Адрес пустой")
+            return None
+        
+        try:
+            url = f"https://catalog.api.2gis.com/3.0/items/geocode"
+            params = {
+                'q': address,
+                'fields': 'items.point,items.name,items.full_name,items.address_name,items.type,items.purpose_name',
+                'key': self.two_gis_api_key
+            }
+            
+            print(f"[GEOCODE] Отправляем запрос к 2GIS API...")
+            print(f"[GEOCODE] URL: {url}")
+            print(f"[GEOCODE] Параметры: {params}")
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params) as response:
+                    print(f"[GEOCODE] Статус ответа: {response.status}")
+                    
+                    if response.status == 200:
+                        data = await response.json()
+                        print(f"[GEOCODE] Ответ получен: {data}")
+                        
+                        if data.get('result', {}).get('items'):
+                            result = data['result']['items'][0]
+                            print(f"[GEOCODE] ✅ Найден результат: {result}")
+                            return result
+                        else:
+                            print(f"[GEOCODE] ❌ Результаты не найдены в ответе")
+                            return None
+                    else:
+                        error_text = await response.text()
+                        print(f"[GEOCODE] ❌ Ошибка API: {response.status}")
+                        print(f"[GEOCODE] Ответ: {error_text}")
+                        return None
+        except Exception as e:
+            print(f"[GEOCODE] ❌ Ошибка геокодирования адреса '{address}': {e}")
+            return None
+    
+    def _generate_map_html(self, location_data: Dict[str, Any], colors: Dict[str, str], theme_styles: Dict[str, str]) -> str:
+        """
+        Генерирует HTML для встраивания 2GIS карты используя новый MapGL JS API
+        """
+        print(f"[DEBUG] _generate_map_html вызван с location_data: {location_data}")
+        
+        if not location_data:
+            print("[DEBUG] location_data пустой, возвращаем пустую строку")
+            return ""
+        
+        coordinates = location_data.get('point', {})
+        lat = coordinates.get('lat')
+        lon = coordinates.get('lon')
+        
+        print(f"[DEBUG] Координаты: lat={lat}, lon={lon}")
+        
+        if not lat or not lon:
+            print("[DEBUG] Координаты отсутствуют, возвращаем пустую строку")
+            return ""
+        
+        location_name = location_data.get('name', 'Место проведения')
+        full_address = location_data.get('full_name', '')
+        
+        # Получаем API ключ
+        api_key = getattr(settings, "TWO_GIS_API_KEY", "")
+        
+        # Генерируем уникальный ID для контейнера карты (без дефисов)
+        map_id = f"map{uuid.uuid4().hex[:8]}"
+        
+        # Создаем HTML с новым MapGL JS API
+        map_html = f"""
+        <div class="w-full h-64 rounded-lg overflow-hidden shadow-lg border border-gray-200">
+            <div id="{map_id}" class="w-full h-full"></div>
+        </div>
+        
+        <script src="https://mapgl.2gis.com/api/js/v1?callback=initMap{map_id}" async defer></script>
+        <script>
+            function initMap{map_id}() {{
+                try {{
+                    console.log('🗺️ Инициализация карты 2ГИС для {location_name}...');
+                    
+                    const map = new mapgl.Map('{map_id}', {{
+                        key: '{api_key}',
+                        center: [{lon}, {lat}],
+                        zoom: 16
+                    }});
+                    
+                    console.log('📍 Добавляем маркер...');
+                    // Добавляем маркер
+                    const marker = new mapgl.Marker(map, {{
+                        coordinates: [{lon}, {lat}]
+                    }});
+                    
+                    console.log('✅ Карта успешно инициализирована!');
+                    
+                    // Добавляем обработчик ошибок
+                    map.on('error', function(e) {{
+                        console.error('❌ Ошибка карты 2ГИС:', e);
+                        showFallback{map_id}();
+                    }});
+                    
+                }} catch (error) {{
+                    console.error('❌ Ошибка инициализации карты:', error);
+                    showFallback{map_id}();
+                }}
+            }}
+            
+            function showFallback{map_id}() {{
+                console.log('🔄 Показываем fallback для {location_name}...');
+                document.getElementById('{map_id}').innerHTML = 
+                    '<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50">' +
+                    '<div class="text-center p-4">' +
+                    '<div class="text-3xl mb-3">📍</div>' +
+                    '<p class="font-bold text-lg text-gray-800">{location_name}</p>' +
+                    '<p class="text-gray-600">{full_address}</p>' +
+                    '<p class="text-sm text-gray-500 mt-2">Координаты: {lat}, {lon}</p>' +
+                    '</div></div>';
+            }}
+        </script>
+        """
+        
+        return map_html
     
     def _generate_calendar_html(self, event_date: datetime, colors: Dict[str, str]) -> str:
         """Генерирует HTML календаря с правильными цветами и русской локализацией"""
@@ -371,6 +520,13 @@ class SiteGeneratorService:
         - Proper accessibility attributes
         - Clean, modern layout
         - Integration of calendar, location, RSVP if provided
+        - Use TwoGISMapPreview component for location display:
+          <TwoGISMapPreview
+            location={{`${{form.city ? form.city + ', ' : ''}}${{form.location}}`}}
+            title={{form.title || "Место проведения"}}
+            height="200px"
+            className="rounded-lg"
+          />
         
         Output only the JSX component code.
         """
@@ -393,26 +549,82 @@ class SiteGeneratorService:
         
         return code
 
-    def generate_html(self, event_json: dict) -> str:
+    async def generate_html(self, event_json: dict) -> str:
+        print(f"[HTML] 🚀 Начинаем генерацию HTML")
         print(f"[HTML] event_json id={event_json.get('id')} title={event_json.get('content_details', {}).get('event_title')}")
+        
         event = EventData.parse_obj(event_json)
         data = event.content_details
+        
+        print(f"[HTML] 📋 Данные события:")
+        print(f"[HTML]   - event_type: {event.event_type}")
+        print(f"[HTML]   - theme: {event.theme}")
+        print(f"[HTML]   - color_preferences: {event.color_preferences}")
+        print(f"[HTML]   - content_details keys: {list(data.keys())}")
+        
         # Получаем UUID сайта, если есть
         site_id = str(event_json.get('id', ''))
+        print(f"[HTML] site_id: {site_id}")
+        
         # Получаем цветовую схему и стили темы
         colors = self._get_color_scheme(event.color_preferences)
         theme_styles = self._get_theme_styles(event.theme)
+        print(f"[HTML] Цветовая схема: {event.color_preferences}")
+        print(f"[HTML] Тема: {event.theme}")
+        
         # Парсим дату события
         event_date = None
         if data.get('event_date'):
             try:
                 event_date = datetime.strptime(data['event_date'], '%Y-%m-%d')
+                print(f"[HTML] Дата события: {event_date}")
             except ValueError:
+                print(f"[HTML] ❌ Ошибка парсинга даты: {data['event_date']}")
                 pass
+        
+        # Геокодируем адрес для карты
+        location_data = None
+        print(f"[HTML] 🔍 Анализ данных для карты:")
+        print(f"[HTML]   - city: '{data.get('city')}'")
+        print(f"[HTML]   - venue_name: '{data.get('venue_name')}'")
+        print(f"[HTML]   - location: '{data.get('location')}'")
+        print(f"[HTML]   - event_city: '{data.get('event_city')}'")
+        print(f"[HTML]   - venue: '{data.get('venue')}'")
+        
+        # Проверяем разные варианты названий полей
+        city = data.get('city') or data.get('event_city')
+        venue = data.get('venue_name') or data.get('location') or data.get('venue')
+        
+        print(f"[HTML] 🎯 Выбранные поля:")
+        print(f"[HTML]   - city: '{city}'")
+        print(f"[HTML]   - venue: '{venue}'")
+        
+        if city and venue:
+            address = f"{city}, {venue}".strip()
+            print(f"[HTML] 🗺️ Геокодируем адрес: '{address}'")
+            if address:
+                location_data = await self._geocode_address(address)
+                print(f"[HTML] 📍 Результат геокодирования: {location_data}")
+            else:
+                print(f"[HTML] ❌ Адрес пустой после strip()")
+        else:
+            print(f"[HTML] ❌ Недостаточно данных для геокодирования:")
+            print(f"[HTML]   - city: '{city}' (пустой: {not city})")
+            print(f"[HTML]   - venue: '{venue}' (пустой: {not venue})")
+        
         # Генерируем компоненты
+        print(f"[HTML] 🔧 Генерируем компоненты...")
         calendar_html = self._generate_calendar_html(event_date, colors)
         rsvp_section = self._generate_rsvp_section(data, colors, theme_styles, site_id=site_id)
         contact_section = self._generate_contact_section(data, colors, theme_styles)
+        map_section = self._generate_map_html(location_data, colors, theme_styles)
+        
+        print(f"[HTML] 📊 Результаты генерации:")
+        print(f"[HTML]   - calendar_html: {'✅' if calendar_html else '❌'}")
+        print(f"[HTML]   - rsvp_section: {'✅' if rsvp_section else '❌'}")
+        print(f"[HTML]   - contact_section: {'✅' if contact_section else '❌'}")
+        print(f"[HTML]   - map_section: {'✅' if map_section else '❌'}")
+        print(f"[HTML]   - map_section length: {len(map_section) if map_section else 0}")
         
         # Форматируем дату и время
         formatted_date = format_date(event_date, 'EEEE, d MMMM y', locale='ru').capitalize() if event_date else ''
@@ -445,6 +657,10 @@ class SiteGeneratorService:
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <title>{data.get('event_title', 'Приглашение на событие')}</title>
     <script src='https://cdn.tailwindcss.com'></script>
+    <script>
+      // Передаем API ключ 2GIS в сгенерированный HTML
+      window.TWO_GIS_API_KEY = '{getattr(settings, "TWO_GIS_API_KEY", "")}';
+    </script>
     <style>
         {extra_styles}
         
@@ -638,26 +854,19 @@ class SiteGeneratorService:
     <div class="space-y-4">
       <div class="location-card p-4 rounded-2xl">
         <p class="text-lg font-semibold {colors['accent']} mb-2">
-          {data.get('location', 'Место уточняется')}
+          {data.get('venue_name', data.get('location', 'Место уточняется'))}
         </p>
-        {f'<p class="text-sm text-gray-600 mb-4">{data.get("location_address", "")}</p>' if data.get('location_address') else ''}
+        {f'<p class="text-sm text-gray-600 mb-4">{data.get("city", "")}</p>' if data.get('city') else ''}
         
-        <div class="map-placeholder h-32 rounded-xl mb-4 relative">
-          <div class="absolute inset-0 flex items-center justify-center">
-            <span class="text-gray-400 text-sm font-medium">Карта загружается...</span>
+        {map_section if map_section else '''
+        <div class="w-full h-64 rounded-lg overflow-hidden border border-gray-200 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+          <div class="text-center">
+            <div class="text-4xl mb-4">📍</div>
+            <p class="text-lg font-semibold text-gray-700">Место проведения</p>
+            <p class="text-sm text-gray-600">Карта будет доступна при указании адреса</p>
           </div>
         </div>
-        
-        {f'''
-        <a href="https://maps.google.com/?q={data.get('location_address', data.get('location', ''))}" 
-           target="_blank" 
-           class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors font-medium">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-          Открыть в картах
-        </a>
-        ''' if data.get('location') or data.get('location_address') else ''}
+        '''}
       </div>
     </div>
   </div>
@@ -843,9 +1052,15 @@ class SiteGeneratorService:
                 `;
             }}
         }}, 2000);
-    </script>
+            </script>
 </body>
 </html>"""
+        
+        print(f"[HTML] 🎉 Генерация HTML завершена")
+        print(f"[HTML] 📏 Размер HTML: {len(html)} символов")
+        print(f"[HTML] 🗺️ Карта включена: {'✅' if 'mapgl.Map' in html else '❌'}")
+        print(f"[HTML] 🗺️ API ключ в HTML: {'✅' if getattr(settings, 'TWO_GIS_API_KEY', '') in html else '❌'}")
+        print(f"[HTML] 🗺️ MapGL script включен: {'✅' if 'mapgl.2gis.com/api/js/v1' in html else '❌'}")
         
         return html
 
@@ -950,10 +1165,109 @@ class SiteGeneratorService:
             </div>
         </div>
         """
+    def add_map_to_html(self, html_content: str, city: str, venue_name: str) -> str:
+        """Добавляет карту 2GIS в HTML контент"""
+        
+        # Создаем адрес для геокодинга
+        address = f"{city}, {venue_name}"
+        
+        # HTML для карты 2GIS
+        map_html = f"""
+        <!-- 2GIS Map Section -->
+        <div class="bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 sm:p-10 md:p-12 max-w-4xl mx-auto mb-8 fade-in">
+            <h3 class="text-2xl md:text-3xl font-bold text-indigo-700 mb-6 text-center flex items-center justify-center">
+                <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                </svg>
+                Место проведения
+            </h3>
+            <div class="text-center mb-6">
+                <p class="text-lg text-gray-700 mb-2">{venue_name}</p>
+                <p class="text-gray-600">{city}</p>
+            </div>
+            <div id="map" class="w-full h-64 rounded-2xl overflow-hidden shadow-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="w-full h-full flex items-center justify-center">
+                    <div class="text-white text-center">
+                        <div class="text-4xl mb-4">🗺️</div>
+                        <p class="text-lg font-semibold">Карта загружается...</p>
+                        <p class="text-sm opacity-80">{address}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 2GIS Map Script -->
+        <script src="https://mapgl.2gis.com/api/js"></script>
+        <script>
+            // 2GIS API Key
+            const TWO_GIS_API_KEY = '{getattr(settings, "TWO_GIS_API_KEY", "")}';
+            
+            // Геокодинг адреса
+            async function geocodeAddress(address) {{
+                try {{
+                    const response = await fetch(`https://catalog.api.2gis.com/3.0/items/geocode?q=${{encodeURIComponent(address)}}&fields=items.point,items.name,items.full_name&key=${{TWO_GIS_API_KEY}}`);
+                    const data = await response.json();
+                    
+                    if (data.result?.items && data.result.items.length > 0) {{
+                        return data.result.items[0].point;
+                    }}
+                }} catch (error) {{
+                    console.error('Geocoding error:', error);
+                }}
+                return null;
+            }}
+            
+            // Инициализация карты
+            async function initMap() {{
+                const address = '{address}';
+                const coordinates = await geocodeAddress(address);
+                
+                if (coordinates) {{
+                    const map = new mapgl.Map('map', {{
+                        key: TWO_GIS_API_KEY,
+                        center: [coordinates.lon, coordinates.lat],
+                        zoom: 15
+                    }});
+                    
+                    // Добавляем маркер
+                    new mapgl.Marker(map, {{
+                        coordinates: [coordinates.lon, coordinates.lat]
+                    }});
+                }} else {{
+                    // Fallback - показываем адрес без карты
+                    document.getElementById('map').innerHTML = `
+                        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
+                            <div class="text-center p-6">
+                                <div class="text-4xl mb-4">📍</div>
+                                <p class="text-lg font-semibold text-gray-800">{venue_name}</p>
+                                <p class="text-gray-600">{city}</p>
+                            </div>
+                        </div>
+                    `;
+                }}
+            }}
+            
+            // Запускаем инициализацию карты
+            document.addEventListener('DOMContentLoaded', initMap);
+        </script>
+        """
+        
+        # Находим место для вставки карты (после заголовка, перед контактами)
+        if 'Место проведения' in html_content:
+            # Если уже есть секция места проведения, заменяем её
+            import re
+            pattern = r'<div[^>]*>.*?Место проведения.*?</div>'
+            html_content = re.sub(pattern, map_html, html_content, flags=re.DOTALL)
+        else:
+            # Ищем место для вставки (перед контактами)
+            contact_pattern = r'(<div[^>]*>.*?Вопросы\?.*?</div>)'
+            html_content = re.sub(contact_pattern, map_html + r'\1', html_content, flags=re.DOTALL)
+        
+        return html_content
     @staticmethod
     async def generate_and_save_site(db, user_id, event_json):
         """
-        Генерирует production-ready React-компонент и HTML-превью, сохраняет оба в базу.
+        Генерирует production-ready React-компонент, сохраняет в базу.
         """
         import uuid
         from ..models.sites import Site
@@ -966,7 +1280,6 @@ class SiteGeneratorService:
             event.content_details['event_time'] = event_json['content_details']['event_time']
         generator = SiteGeneratorService()
         react_code = await generator.generate_react_component(event.model_dump())
-        html_code = generator.generate_html(event.model_dump())
         result = await db.execute(select(Site.slug))
         existing_slugs = [row[0] for row in result.fetchall()]
         title = event.content_details.get('event_title', 'untitled')
@@ -983,7 +1296,7 @@ class SiteGeneratorService:
                 "react_component_code": react_code,
                 "event_json": event.model_dump()
             },
-            html_content=html_code,
+            html_content="",  # Больше не генерируем HTML
             content_details=event.model_dump(),
             color_preferences=event.color_preferences,
             style_preferences=event_json.get('style_preferences'),
@@ -995,12 +1308,6 @@ class SiteGeneratorService:
             share_count=0
         )
         db.add(site)
-        await db.commit()
-        await db.refresh(site)
-        # --- Исправление: теперь мы знаем site.id, обновим event_json и html_content ---
-        event_json["id"] = str(site.id)
-        html_code = generator.generate_html(event_json)
-        site.html_content = html_code
         await db.commit()
         await db.refresh(site)
         return SiteGenerationResponse.model_validate(site)

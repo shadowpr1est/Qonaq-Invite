@@ -1,3 +1,7 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/use-auth';
+import { apiClient } from '@/lib/api';
 import MainLayout from '@/components/MainLayout';
 import Hero from '@/components/Hero';
 import HowItWorks from '@/components/HowItWorks';
@@ -6,8 +10,18 @@ import FAQ from '@/components/FAQ';
 import Footer from '@/components/Footer';
 
 const Index = () => {
+  const navigate = useNavigate();
+  const { setUser, user, isInitialized } = useAuth();
+
+  // Простая отладка при загрузке страницы
+  console.log('Index component loaded, URL:', window.location.href);
+
+
+
+
+
   return (
-    <MainLayout className="px-4 sm:px-6 lg:px-8">
+    <MainLayout>
       <Hero />
       <HowItWorks />
       <SocialProof />

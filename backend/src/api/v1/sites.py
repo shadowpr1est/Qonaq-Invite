@@ -15,12 +15,20 @@ from ...schemas.sites import (
     SiteUpdate, UserSitesResponse, SiteAnalyticsEvent, SiteStatistics, RSVPCreate, RSVPResponse
 )
 from ...services.sites_service import sites_service
-from ...core.exceptions import ErrorResponse
+from ...core.exceptions import (
+    raise_site_not_found, raise_site_not_published, raise_site_access_denied,
+    raise_rsvp_submission_failed, raise_internal_server_error, LocalizedHTTPException
+)
 from ...models.sites import Site
+import os
+import httpx
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Импортируем limiter из rate_limiter.py
+from ...core.rate_limiter import limiter
 
 # Хранилище активных WebSocket соединений
 active_connections: dict[str, WebSocket] = {}
@@ -59,7 +67,7 @@ async def websocket_generation_status(
         logger.info(f"WebSocket for user {user.id} disconnected for generation {generation_id}")
 
 
-@router.post("/generate", response_model=SiteGenerationResponse)
+@router.post("/generate", response_model=dict)
 async def generate_site(
     request: dict,
     generation_id: Optional[str] = Query(None),
@@ -67,7 +75,7 @@ async def generate_site(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Generate a new React site using OpenAI with real-time status updates
+    Generate a new React site using OpenAI with background task processing
     
     Creates a complete React landing page based on user input:
     - Event type (wedding, birthday, corporate, etc.)
@@ -75,40 +83,61 @@ async def generate_site(
     - Content details and requirements
     - Color and design preferences
     
-    Supports real-time status updates via WebSocket if generation_id is provided.
-    
-    Returns the generated site with React component structure and TypeScript code.
+    Returns task information for tracking progress.
     """
     try:
         logger.info(f"User {current_user.id} requesting React site generation for {request['event_type']}")
         
-        # Создаем callback для отправки статусов через WebSocket
-        async def status_callback(status: str):
-            if generation_id:
-                # Удаляю все вызовы send_generation_status, оставляю только обработку ошибок или логирование
-                pass
-        
-        site = await sites_service.create_site(
+        # Запускаем фоновую задачу
+        result = await sites_service.create_site(
             db=db,
             user_id=current_user.id,
-            request=request,
-            status_callback=status_callback
+            request=request
         )
         
-        logger.info(f"React site generated successfully: {site.id}")
-        return site
+        logger.info(f"Site generation task started: {result['task_id']}")
+        return result
         
     except Exception as e:
-        logger.error(f"Error generating React site: {e}")
-        # Отправляем ошибку через WebSocket
-        if generation_id:
-            error_status = "error"
-            # Удаляю все вызовы send_generation_status, оставляю только обработку ошибок или логирование
-            pass
-        
+        logger.error(f"Error starting site generation: {e}")
+        raise_internal_server_error()
+
+
+@router.get("/task/{task_id}")
+async def get_task_status(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get status of a background task
+    """
+    try:
+        status = await sites_service.get_task_status(task_id)
+        return status
+    except Exception as e:
+        logger.error(f"Error getting task status: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка генерации React сайта: {str(e)}"
+            detail=f"Ошибка получения статуса задачи: {str(e)}"
+        )
+
+
+@router.post("/preview")
+async def generate_preview(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Generate a preview of the site
+    """
+    try:
+        result = await sites_service.generate_preview(request)
+        return result
+    except Exception as e:
+        logger.error(f"Error generating preview: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка генерации предварительного просмотра: {str(e)}"
         )
 
 
@@ -136,19 +165,13 @@ async def get_site_react_code(
         )
         
         if not site:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Сайт не найден"
-            )
+            raise_site_not_found()
         
         # Extract React code from site structure
         react_code = site.site_structure.get('react_component_code', '')
         
         if not react_code:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="React код не найден для этого сайта"
-            )
+            raise_site_not_found()
         
         # Get component name for filename
         component_name = site.site_structure.get('component_name', site.title.replace(' ', ''))
@@ -164,18 +187,17 @@ async def get_site_react_code(
             }
         )
         
-    except HTTPException:
+    except LocalizedHTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting React code: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка получения React кода"
-        )
+        raise_internal_server_error()
 
 
 @router.get("/my-sites")
+@limiter.limit("100/minute")  # Увеличенный лимит для получения списка сайтов
 async def get_my_sites(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_current_user),
@@ -230,10 +252,7 @@ async def get_my_sites(
         }
     except Exception as e:
         logger.error(f"Error getting user sites: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка получения списка сайтов"
-        )
+        raise_internal_server_error()
 
 
 @router.get("/{site_id}", response_model=SiteGenerationResponse)
@@ -256,21 +275,15 @@ async def get_site(
         )
         
         if not site:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Сайт не найден"
-            )
+            raise_site_not_found()
         
         return site
         
-    except HTTPException:
+    except LocalizedHTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting site: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка получения сайта"
-        )
+        raise_internal_server_error()
 
 
 @router.put("/{site_id}", response_model=SiteGenerationResponse)
@@ -298,21 +311,15 @@ async def update_site(
         )
         
         if not site:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Сайт не найден"
-            )
+            raise_site_not_found()
         
         return site
         
-    except HTTPException:
+    except LocalizedHTTPException:
         raise
     except Exception as e:
         logger.error(f"Error updating site: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка обновления сайта"
-        )
+        raise_internal_server_error()
 
 
 @router.delete("/{site_id}")
@@ -335,21 +342,15 @@ async def delete_site(
         )
         
         if not success:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Сайт не найден"
-            )
+            raise_site_not_found()
         
         return {"message": "Сайт успешно удален"}
         
-    except HTTPException:
+    except LocalizedHTTPException:
         raise
     except Exception as e:
         logger.error(f"Error deleting site: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка удаления сайта"
-        )
+        raise_internal_server_error()
 
 @router.post("/{site_id}/rsvp", response_model=RSVPResponse)
 async def submit_rsvp(
@@ -360,27 +361,20 @@ async def submit_rsvp(
     """
     Submit RSVP for a site (public, не требует авторизации)
     """
-    site = await db.execute(select(Site).where(Site.id == site_id, Site.is_published == True))
-    site_obj = site.scalar_one_or_none()
-    if not site_obj:
-        raise HTTPException(status_code=404, detail="Сайт не найден или не опубликован")
-    rsvp_obj = await sites_service.create_rsvp(db, site_id, rsvp.dict())
-    # --- Удаляю запись аналитики RSVP ---
-    # from ...schemas.sites import SiteAnalyticsEvent
-    # analytics_event = SiteAnalyticsEvent(
-    #     event_type="rsvp",
-    #     event_data={
-    #         "response": rsvp.response,
-    #         "guest_name": rsvp.guest_name,
-    #         "guest_email": rsvp.guest_email,
-    #         "comment": rsvp.comment
-    #     },
-    #     user_agent=None,
-    #     referrer=None
-    # )
-    # await sites_service.record_analytics_event(db, site_id, analytics_event)
-    # ---
-    return RSVPResponse.model_validate(rsvp_obj)
+    try:
+        site = await db.execute(select(Site).where(Site.id == site_id, Site.is_published == True))
+        site_obj = site.scalar_one_or_none()
+        if not site_obj:
+            raise_site_not_published()
+        
+        rsvp_obj = await sites_service.create_rsvp(db, site_id, rsvp.dict())
+        return RSVPResponse.model_validate(rsvp_obj)
+        
+    except LocalizedHTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"RSVP submission failed: {str(e)}")
+        raise_rsvp_submission_failed()
 
 @router.get("/{site_id}/rsvp", response_model=List[RSVPResponse])
 async def get_rsvps(
@@ -394,7 +388,7 @@ async def get_rsvps(
     site = await db.execute(select(Site).where(Site.id == site_id, Site.user_id == current_user.id))
     site_obj = site.scalar_one_or_none()
     if not site_obj:
-        raise HTTPException(status_code=404, detail="Сайт не найден или нет доступа")
+        raise_site_access_denied()
     rsvps = await sites_service.get_rsvps(db, site_id)
     return [RSVPResponse.model_validate(r) for r in rsvps]
 
@@ -418,18 +412,142 @@ async def view_public_site(
         )
         
         if not site:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Страница не найдена"
-            )
+            raise_site_not_found()
         
-        return HTMLResponse(content=site.html_content)
+        # Отладочная информация
+        print(f"🔍 DEBUG: site_structure = {site.site_structure}")
+        print(f"📊 DEBUG: site_structure type = {type(site.site_structure)}")
         
-    except HTTPException:
+        # Проверяем, является ли site_structure строкой JSON
+        if isinstance(site.site_structure, str):
+            import json
+            site_structure = json.loads(site.site_structure)
+        else:
+            site_structure = site.site_structure
+        
+        site_data = site_structure.get('event_json', {})
+        print(f"🔍 DEBUG: site_data = {site_data}")
+        print(f"📊 DEBUG: site_data type = {type(site_data)}")
+        print(f"🔑 DEBUG: site_data keys = {list(site_data.keys()) if site_data else 'None'}")
+        
+        try:
+            # Используем site_generator для генерации React компонента
+            from ..services.site_generator import SiteGeneratorService
+            generator = SiteGeneratorService()
+            react_component = await generator.generate_react_component(site_data)
+            
+            # Создаем полную HTML страницу с React
+            react_page = f"""
+            <!DOCTYPE html>
+            <html lang="ru">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>{site.title}</title>
+                <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+                <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+                <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+                <script src="https://cdn.tailwindcss.com"></script>
+                <script src="https://mapgl.2gis.com/api/js/v1"></script>
+            </head>
+            <body>
+                <div id="root"></div>
+                <script type="text/babel">
+                    {react_component}
+                </script>
+            </body>
+            </html>
+            """
+            
+            print(f"✅ DEBUG: react_page generated, length = {len(react_page)}")
+            return HTMLResponse(content=react_page)
+        except Exception as e:
+            print(f"❌ DEBUG: Error in generate_react_component: {e}")
+            import traceback
+            traceback.print_exc()
+            return HTMLResponse(content=f"<h1>Error: {str(e)}</h1>")
+        
+    except LocalizedHTTPException:
         raise
     except Exception as e:
         logger.error(f"Error viewing public site: {e}")
+        raise_internal_server_error()
+
+@router.get("/get_coordinates")
+async def get_coordinates(
+    city: str = Query(..., description="City name"),
+    venue_name: str = Query(..., description="Venue name"),
+    current_user = Depends(get_current_user)
+):
+    """Get coordinates for a venue using 2GIS API"""
+    
+    # Получаем API ключ из переменных окружения
+    api_key = os.getenv("VITE_2GIS_API_KEY")
+    if not api_key:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка загрузки страницы"
+            status_code=500, 
+            detail="2GIS API key not configured"
+        )
+    
+    # Формируем поисковый запрос
+    query = f"{city}, {venue_name}".strip()
+    
+    try:
+        # Делаем запрос к 2GIS Geocoder API
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                "https://catalog.api.2gis.com/3.0/items/geocode",
+                params={
+                    "q": query,
+                    "fields": "items.point",
+                    "key": api_key
+                }
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"2GIS API error: {response.text}"
+                )
+            
+            data = response.json()
+            
+            # Проверяем наличие результатов
+            if not data.get("result", {}).get("items"):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Location not found: {query}"
+                )
+            
+            # Берем первый результат
+            first_item = data["result"]["items"][0]
+            point = first_item.get("point")
+            
+            if not point or "lat" not in point or "lon" not in point:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Invalid coordinates in response"
+                )
+            
+            return {
+                "lat": point["lat"],
+                "lon": point["lon"],
+                "address": first_item.get("full_name", query),
+                "name": first_item.get("name", venue_name)
+            }
+            
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=408,
+            detail="Request to 2GIS API timed out"
+        )
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Error connecting to 2GIS API: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error: {str(e)}"
         )

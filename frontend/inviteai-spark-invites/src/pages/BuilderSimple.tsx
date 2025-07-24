@@ -202,9 +202,9 @@ const BuilderSimple = () => {
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
           <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur-sm">
-            <CardHeader className="bg-gradient-to-r from-purple-50/80 via-blue-50/80 to-indigo-50/80 rounded-t-xl">
+            <CardHeader className="bg-gradient-to-r from-purple-50/80 via-blue-50/80 to-indigo-50/80 rounded-t-xl pb-4">
               <div className="text-center">
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <CardTitle className="text-2xl md:text-3xl font-bold text-gray-800">
                     {steps[currentStep].title}
                   </CardTitle>
@@ -215,7 +215,7 @@ const BuilderSimple = () => {
               </div>
 
               {/* Progress Steps */}
-              <div className="flex items-center justify-center mt-8 px-4">
+              <div className="flex items-center justify-center mt-4 px-4">
                 <div className="flex items-center justify-center space-x-2 md:space-x-4 w-full max-w-3xl">
                   {steps.map((step, index) => {
                     const Icon = step.icon;

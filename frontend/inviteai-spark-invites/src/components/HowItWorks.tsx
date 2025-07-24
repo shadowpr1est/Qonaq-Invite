@@ -2,31 +2,33 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { Bell, Palette, Share2 } from 'lucide-react';
-
-const steps = [
-  {
-    number: 1,
-    title: 'Выберите повод',
-    description: 'Свадьба, той, день рождения или любое событие.',
-    icon: Bell,
-  },
-  {
-    number: 2,
-    title: 'Настройте стиль',
-    description: 'Подберите цвет, шрифт и фон за пару кликов.',
-    icon: Palette,
-  },
-  {
-    number: 3,
-    title: 'Поделитесь ссылкой',
-    description: 'Отправьте гостям URL или QR-код.',
-    icon: Share2,
-  }
-];
+import { useTranslation } from 'react-i18next';
 
 const HowItWorks = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const isInView = useInView(sectionRef, { once: true, amount: 0.3 });
+  const { t } = useTranslation();
+
+  const steps = [
+    {
+      number: 1,
+      title: t('how_it_works.steps.step1.title'),
+      description: t('how_it_works.steps.step1.description'),
+      icon: Bell,
+    },
+    {
+      number: 2,
+      title: t('how_it_works.steps.step2.title'),
+      description: t('how_it_works.steps.step2.description'),
+      icon: Palette,
+    },
+    {
+      number: 3,
+      title: t('how_it_works.steps.step3.title'),
+      description: t('how_it_works.steps.step3.description'),
+      icon: Share2,
+    }
+  ];
 
   return (
     <section 
@@ -53,7 +55,7 @@ const HowItWorks = () => {
             transition={{ type: "spring", stiffness: 100, damping: 20 }}
             className="text-4xl lg:text-6xl font-bold font-display mb-6"
           >
-            Как это <span className="text-gradient">работает</span>
+            {t('how_it_works.title').split(' ')[0]} <span className="text-gradient">{t('how_it_works.title').split(' ').slice(1).join(' ')}</span>
           </motion.h2>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
@@ -61,7 +63,7 @@ const HowItWorks = () => {
             transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.1 }}
             className="text-xl text-muted-foreground max-w-2xl mx-auto"
           >
-            Простой процесс создания приглашения за три шага
+            {t('how_it_works.subtitle')}
           </motion.p>
         </div>
 

@@ -32,21 +32,23 @@ const handleError = (error: unknown, errorInfo?: { componentStack: string }) => 
 initResizeObserverErrorSuppression();
 
 // Глобальный обработчик необработанных ошибок
-window.addEventListener('error', (event) => {
-  // Подавляем ResizeObserver loop ошибки в глобальном обработчике
-  const errorMessage = event.error?.message || event.message || '';
-  if (typeof errorMessage === 'string' && errorMessage.includes('ResizeObserver loop')) {
-    event.preventDefault(); // Предотвращаем показ ошибки в консоли
-    return false;
-  }
-  
-  handleError(event.error || event.message);
-});
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    // Подавляем ResizeObserver loop ошибки в глобальном обработчике
+    const errorMessage = event.error?.message || event.message || '';
+    if (typeof errorMessage === 'string' && errorMessage.includes('ResizeObserver loop')) {
+      event.preventDefault(); // Предотвращаем показ ошибки в консоли
+      return false;
+    }
+    
+    handleError(event.error || event.message);
+  });
 
-// Обработчик необработанных промисов
-window.addEventListener('unhandledrejection', (event) => {
-  handleError(event.reason);
-});
+  // Обработчик необработанных промисов
+  window.addEventListener('unhandledrejection', (event) => {
+    handleError(event.reason);
+  });
+}
 
 const rootElement = document.getElementById("root");
 

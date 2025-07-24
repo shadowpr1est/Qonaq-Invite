@@ -22,7 +22,9 @@ const AuthCanvasBackground: React.FC = () => {
       canvas.width = width;
       canvas.height = height;
     };
-    window.addEventListener('resize', handleResize);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+    }
 
     // Animation state
     const dots: { x: number; y: number; r: number; dx: number; dy: number; color: string }[] = [];

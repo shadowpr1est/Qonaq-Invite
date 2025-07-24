@@ -74,7 +74,7 @@ const Settings = () => {
   // Redirect if not authenticated
   useEffect(() => {
     if (isInitialized && !user) {
-      navigate('/login');
+      navigate('/login?from=settings');
     }
   }, [user, isInitialized, navigate]);
 

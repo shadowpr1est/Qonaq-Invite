@@ -9,6 +9,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { NetworkStatus } from "@/components/NetworkStatus";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { LocalizationProvider } from "@/contexts/LocalizationContext";
 
 // Lazy loading для оптимизации производительности
 const Index = lazy(() => import("./pages/Index"));
@@ -25,6 +26,7 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Конфигурация QueryClient с оптимальными настройками
@@ -50,6 +52,8 @@ const LoadingFallback = () => (
 const AppContent = () => {
   const { isInitialized } = useAuth();
 
+  console.log('AppContent rendered, isInitialized:', isInitialized, 'URL:', window.location.href);
+
   if (!isInitialized) {
     return <LoadingFallback />;
   }
@@ -72,6 +76,7 @@ const AppContent = () => {
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/auth-callback" element={<AuthCallback />} />
           <Route path="/legal" element={<Legal />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/public/:siteId" element={<SiteViewer />} />
@@ -88,11 +93,13 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <AppContent />
-          </TooltipProvider>
+          <LocalizationProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <AppContent />
+            </TooltipProvider>
+          </LocalizationProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

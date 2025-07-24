@@ -110,7 +110,7 @@ const Profile = () => {
   // Перенаправление если не авторизован
   useEffect(() => {
     if (isInitialized && !user) {
-      navigate('/login');
+      navigate('/login?from=profile');
     }
   }, [user, isInitialized, navigate]);
 

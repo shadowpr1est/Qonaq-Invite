@@ -16,10 +16,10 @@ export const useIsMobile = () => {
     const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
     
     // Использование более современного API
-    if (mediaQuery.addEventListener) {
+    if (mediaQuery && mediaQuery.addEventListener) {
       mediaQuery.addEventListener("change", handleResize);
       return () => mediaQuery.removeEventListener("change", handleResize);
-    } else {
+    } else if (mediaQuery && mediaQuery.addListener) {
       // Фолбэк для старых браузеров
       mediaQuery.addListener(handleResize);
       return () => mediaQuery.removeListener(handleResize);

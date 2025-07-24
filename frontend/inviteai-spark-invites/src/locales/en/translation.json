@@ -11,5 +11,650 @@
   "password": "Password",
   "confirm_password": "Confirm Password",
   "submit": "Submit",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  
+  "header": {
+    "home": "Invitly AI - Home",
+    "how_it_works": "How it works",
+    "templates": "Templates",
+    "pricing": "Pricing",
+    "blog": "Blog",
+    "create_invitation": "Create new invitation",
+    "create": "Create",
+    "my_invitations": "My invitations",
+    "select_language": "Select language",
+    "open_menu": "Open menu"
+  },
+  
+  "hero": {
+    "new_way": "New way to create invitations",
+    "title": "Create an invitation in a minute",
+    "description": "A platform where your guests receive a beautiful website invitation with a QR link — without designers and PDF chaos.",
+    "features": {
+      "fast": "In 5 minutes",
+      "guests": "Any number of guests",
+      "no_designer": "Without designer"
+    },
+    "cta": {
+      "try_free": "Try for free",
+      "video_demo": "Video demo"
+    },
+    "stats": "Statistics",
+    "phone_templates": [
+      {
+        "title": "Wedding",
+        "description": "Romantic invitation",
+        "emoji": "💕"
+      },
+      {
+        "title": "Birthday",
+        "description": "Celebratory mood",
+        "emoji": "🎂"
+      },
+      {
+        "title": "Corporate",
+        "description": "Business event",
+        "emoji": "🎉"
+      }
+    ],
+    "phone_ui": {
+      "invitation_text": "You are invited to a special event",
+      "details_button": "Details",
+      "welcome_message": "Hello, {{name}}!",
+      "template_info_separator": " • "
+    },
+    "user_stats": {
+      "active_invitations": "Active invitations",
+      "total_created": "Total created",
+      "total_views": "Views"
+    }
+  },
+  
+
+  
+  "builder": {
+    "loading": "Loading...",
+    "creating_invitation": "Creating your invitation...",
+    "steps": {
+      "step1_title": "Choose Template",
+      "step1_subtitle": "Choose from professional event templates",
+      "step2_title": "Event Details",
+      "step2_subtitle": "Fill in event information and contacts",
+      "step3_title": "Styling and Preview",
+      "step3_subtitle": "Choose style and see preview"
+    },
+    "event_types": {
+      "birthday": "Birthday",
+      "birthday_description": "Celebration in honor of birthday",
+      "wedding": "Wedding",
+      "wedding_description": "Special day for two",
+      "corporate": "Corporate",
+      "corporate_description": "Business meetings and events",
+      "baby_shower": "Baby Shower",
+      "baby_shower_description": "Celebration in anticipation of baby",
+      "graduation": "Graduation",
+      "graduation_description": "Celebration of graduation",
+      "anniversary": "Anniversary",
+      "anniversary_description": "Celebrating an important date"
+    },
+    "color_schemes": {
+      "romantic_pastels": "Romantic Pastels",
+      "vibrant_celebration": "Vibrant Celebration",
+      "elegant_neutrals": "Elegant Neutrals",
+      "bold_modern": "Bold Modern",
+      "nature_inspired": "Nature Inspired",
+      "classic_black_white": "Classic Black & White",
+      "warm_autumn": "Warm Autumn",
+      "cool_winter": "Cool Winter"
+    },
+    "form": {
+      "event_title": "Event Title",
+      "event_date": "Event Date",
+      "event_time": "Time",
+      "location": "Location",
+      "description": "Description",
+      "contact_information": "Contact Information",
+      "contact_name": "Name",
+      "contact_phone": "Phone",
+      "event_title_placeholder": "Name your event...",
+      "location_placeholder": "Where will the event take place?",
+      "description_placeholder": "Tell guests what to expect...",
+      "contact_name_placeholder": "Contact person",
+      "contact_phone_placeholder": "Phone number",
+      "contact_email_placeholder": "Email address",
+      "rsvp": {
+        "enable": "Enable RSVP",
+        "options_title": "RSVP Options",
+        "option_placeholder": "Option {{number}}",
+        "add_option": "Add option"
+      },
+      "rsvp_options": {
+        "yes": "Yes, I'm coming",
+        "no": "No, I can't come"
+      }
+    },
+    "preview": {
+      "show": "Show",
+      "hide": "Hide",
+      "preview": "preview",
+      "default_title": "Your wonderful event",
+      "default_location": "Beautiful place",
+      "default_description": "We invite you to an unforgettable celebration!"
+    },
+    "styling": {
+      "color_scheme": "Color Scheme",
+      "site_style": "Site Style"
+    },
+    "navigation": {
+      "cancel": "Cancel",
+      "back": "Back",
+      "next": "Next",
+      "create_invitation": "Create invitation"
+    }
+  },
+  
+  "dashboard": {
+    "title": "My invitations",
+    "create_new": "Create new invitation",
+    "no_invitations": "You don't have any invitations yet",
+    "create_first": "Create your first invitation",
+    "recent": "Recent",
+    "all": "All invitations",
+    "draft": "Draft",
+    "published": "Published",
+    "archived": "Archived",
+    "delete_confirm": "Are you sure you want to delete the site \"{{name}}\"? This action cannot be undone.",
+    "delete_success": "Site successfully deleted",
+    "delete_error": "Error deleting site",
+    "publish_success": "Site successfully published",
+    "unpublish_success": "Site unpublished",
+    "publish_error": "Error changing site status",
+    "copy_success": "Link copied to clipboard",
+    "copy_error": "Error copying link",
+    "loading_sites": "Loading sites...",
+    "load_error_title": "Load Error",
+    "load_error_description": "Failed to load your sites. Please try again.",
+    "try_again": "Try Again",
+    "welcome_message": "Welcome, {{name}}!",
+    "manage_sites": "Manage your event sites",
+    "total_sites": "Total Sites",
+    "published_count": "Published",
+    "draft_count": "Drafts",
+    "search_placeholder": "Search by title or description...",
+    "filter_status": "Status",
+    "filter_all": "All sites",
+    "filter_published": "Published",
+    "filter_draft": "Drafts",
+    "sort_by": "Sort by",
+    "sort_created": "By creation date",
+    "sort_title": "By title",
+    "sort_views": "By views",
+    "edit": "Edit",
+    "statistics": "Statistics",
+    "copy_link": "Copy link",
+    "delete": "Delete",
+    "published_badge": "Published",
+    "draft_badge": "Draft",
+    "views": "views",
+    "shares": "shares",
+    "created_ago": "created",
+    "no_results_title": "Nothing found",
+    "no_results_description": "Try changing search parameters or filters",
+    "reset_filters": "Reset filters",
+    "create_first_site_title": "Create your first site",
+    "create_first_site_description": "Use AI capabilities to create a beautiful and functional site for any event in just a few minutes",
+    "start_creating": "Start creating",
+    "stats_dialog_title": "Statistics: {{title}}",
+    "loading_stats": "Loading statistics...",
+    "guests_list_title": "Guest list:",
+    "guest_default_name": "Guest",
+    "stats_unavailable": "Statistics unavailable",
+    "stats": {
+      "title": "Site Statistics",
+      "views": "Views",
+      "guests": "Guests",
+      "responses": "Responses",
+      "close": "Close"
+    },
+    "event_types": {
+      "wedding": "Wedding",
+      "birthday": "Birthday",
+      "anniversary": "Anniversary",
+      "corporate": "Corporate",
+      "graduation": "Graduation",
+      "housewarming": "Housewarming"
+    },
+    "actions": {
+      "view": "View",
+      "edit": "Edit",
+      "share": "Share",
+      "stats": "Statistics",
+      "delete": "Delete",
+      "publish": "Publish",
+      "unpublish": "Unpublish"
+    },
+    "loading_sites": "Loading your sites...",
+    "load_error_title": "Loading Error",
+    "load_error_description": "Failed to load site list",
+    "try_again": "Try again",
+    "welcome": "Welcome, {{name}}!",
+    "subtitle": "Manage your events and track responses",
+    "total_sites": "Total Sites",
+    "published_sites": "Published"
+  },
+  
+
+  
+  "profile": {
+    "title": "Profile",
+    "personal_info": "Personal information",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "avatar": "Profile photo",
+    "change_avatar": "Change photo",
+    "save_changes": "Save changes",
+    "password_section": "Change password",
+    "current_password": "Current password",
+    "new_password": "New password",
+    "confirm_new_password": "Confirm new password",
+    "update_password": "Update password"
+  },
+  
+  "settings": {
+    "title": "Settings",
+    "notifications": "Notifications",
+    "email_notifications": "Email notifications",
+    "push_notifications": "Push notifications",
+    "language": "Interface language",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "auto": "Auto",
+    "privacy": "Privacy",
+    "data_export": "Data export",
+    "delete_account": "Delete account"
+  },
+  
+  "pricing": {
+    "title": "Pricing",
+    "subtitle": "Choose the plan that's right for you",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "save_yearly": "Save 20%",
+    "free": {
+      "title": "Free",
+      "price": "$0",
+      "period": "forever",
+      "features": [
+        "1 invitation",
+        "Basic templates",
+        "QR code",
+        "Email support"
+      ]
+    },
+    "pro": {
+      "title": "Pro",
+      "price": "$9.99",
+      "period": "per month",
+      "features": [
+        "Unlimited invitations",
+        "All templates",
+        "Customization",
+        "Analytics",
+        "Priority support"
+      ]
+    },
+    "business": {
+      "title": "Business",
+      "price": "$29.99",
+      "period": "per month",
+      "features": [
+        "All Pro features",
+        "Team up to 10 people",
+        "API access",
+        "White label",
+        "Personal manager"
+      ]
+    },
+    "start_free": "Start for free",
+    "choose_plan": "Choose plan"
+  },
+  
+  "blog": {
+    "title": "Blog",
+    "subtitle": "Useful articles and tips",
+    "read_more": "Read more",
+    "published": "Published",
+    "author": "Author",
+    "tags": "Tags",
+    "related_posts": "Related posts"
+  },
+  
+  "footer": {
+    "company": "Company",
+    "about": "About",
+    "careers": "Careers",
+    "contact": "Contact",
+    "product": "Product",
+    "features": "Features",
+    "pricing": "Pricing",
+    "templates": "Templates",
+    "support": "Support",
+    "help": "Help",
+    "docs": "Documentation",
+    "status": "Status",
+    "legal": "Legal",
+    "privacy": "Privacy",
+    "terms": "Terms of Service",
+    "cookies": "Cookies",
+    "copyright": "© 2024 Invitly AI. All rights reserved."
+  },
+  
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "refresh": "Refresh",
+    "download": "Download",
+    "upload": "Upload",
+    "share": "Share",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "confirm": "Confirm",
+    "dismiss": "Dismiss"
+  },
+  
+  "validation": {
+    "required": "This field is required",
+    "email": "Please enter a valid email",
+    "min_length": "Minimum length is {{min}} characters",
+    "max_length": "Maximum length is {{max}} characters",
+    "password_match": "Passwords do not match",
+    "invalid_format": "Invalid format"
+  },
+  
+  "notifications": {
+    "invitation_created": "Invitation created successfully",
+    "invitation_updated": "Invitation updated",
+    "invitation_deleted": "Invitation deleted",
+    "profile_updated": "Profile updated",
+    "password_changed": "Password changed",
+    "email_sent": "Email sent",
+    "changes_saved": "Changes saved"
+  },
+  
+  "how_it_works": {
+    "title": "How it works",
+    "subtitle": "Simple invitation creation process in three steps",
+    "steps": {
+      "step1": {
+        "title": "Choose the occasion",
+        "description": "Wedding, party, birthday or any event."
+      },
+      "step2": {
+        "title": "Customize the style",
+        "description": "Pick color, font and background in a few clicks."
+      },
+      "step3": {
+        "title": "Share the link",
+        "description": "Send guests URL or QR code."
+      }
+    }
+  },
+  
+  "social_proof": {
+    "title": "Our templates and reviews",
+    "templates": "templates",
+    "testimonials": [
+      {
+        "name": "Ainur Zhakupova",
+        "role": "Event Organizer",
+        "content": "Created wedding invitations in 2 minutes! Guests were delighted with the beautiful design and convenient QR link."
+      },
+      {
+        "name": "Marat Abdullin",
+        "role": "Entrepreneur",
+        "content": "I use it for all corporate events. Saves a lot of time, and the result is always professional."
+      },
+      {
+        "name": "Dana Sarsenova",
+        "role": "Mother of two",
+        "content": "Organizing children's parties has become much easier! Beautiful invitations are ready in a minute."
+      }
+    ],
+    "stats": {
+      "title": "Real-time statistics",
+      "invitations_sent": "invitations already sent",
+      "templates_count": "Templates",
+      "satisfied_percent": "Satisfied"
+    }
+  },
+  
+  "network_status": {
+    "offline_message": "No internet connection",
+    "online_message": "Connection restored"
+  },
+  
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Answers to popular questions about our service",
+    "categories": {
+      "general": "General",
+      "payment": "Payment",
+      "privacy": "Privacy"
+    },
+    "questions": [
+      {
+        "question": "How much does it cost to create an invitation?",
+        "answer": "Basic templates are completely free. Premium templates and additional features are available from $2.99.",
+        "category": "payment"
+      },
+      {
+        "question": "Can I change the text in the invitation?",
+        "answer": "Yes, all texts are fully editable. You can change the event name, date, time, location and add a personal message.",
+        "category": "general"
+      },
+      {
+        "question": "Is Kazakh language supported?",
+        "answer": "Of course! Our service fully supports Kazakh and Russian languages, including all special characters (Ә, Қ, Ұ, etc.).",
+        "category": "general"
+      },
+      {
+        "question": "How will guests receive invitations?",
+        "answer": "You will receive a unique link and QR code that can be sent via WhatsApp, Telegram, SMS or any other method.",
+        "category": "general"
+      },
+      {
+        "question": "Is there analytics for invitations?",
+        "answer": "Yes, premium version includes statistics: who viewed the invitation, who confirmed participation and other useful data.",
+        "category": "general"
+      },
+      {
+        "question": "Are my data secure?",
+        "answer": "We use modern encryption methods and do not share your data with third parties. All invitations are stored in a secure environment.",
+        "category": "privacy"
+      },
+      {
+        "question": "Can I delete an invitation?",
+        "answer": "Yes, you can delete an invitation at any time through your personal account. All related data will be completely removed.",
+        "category": "privacy"
+      },
+      {
+        "question": "What payment methods are available?",
+        "answer": "We accept Visa/Mastercard cards, Kaspi Gold, as well as mobile payments. All payments go through secure channels.",
+        "category": "payment"
+      }
+    ],
+    "cta": "Didn't find an answer? Write to us"
+  },
+  
+  "auth": {
+    "login": {
+      "title": "Sign in to your account",
+      "subtitle": "Enter your credentials to sign in",
+      "email": "Email",
+      "password": "Password",
+      "remember_me": "Remember me",
+      "forgot_password": "Forgot password?",
+      "login_button": "Sign in",
+      "no_account": "Don't have an account?",
+      "signup_link": "Sign up",
+      "or": "or",
+      "continue_with_google": "Continue with Google",
+      "continue_with_github": "Continue with GitHub",
+      "errors": {
+        "invalid_credentials": "Invalid email or password",
+        "email_required": "Email is required",
+        "password_required": "Password is required",
+        "network_error": "Network error. Please try again."
+      }
+    },
+    "signup": {
+      "title": "Create an account",
+      "subtitle": "Fill out the form to register",
+      "full_name": "Full name",
+      "email": "Email",
+      "password": "Password",
+      "confirm_password": "Confirm password",
+      "agree_terms": "I agree to the",
+      "terms_link": "Terms of Service",
+      "and": "and",
+      "privacy_link": "Privacy Policy",
+      "signup_button": "Sign up",
+      "have_account": "Already have an account?",
+      "login_link": "Sign in",
+      "or": "or",
+      "continue_with_google": "Continue with Google",
+      "continue_with_github": "Continue with GitHub",
+      "errors": {
+        "name_required": "Name is required",
+        "email_required": "Email is required",
+        "password_required": "Password is required",
+        "password_min_length": "Password must be at least 8 characters",
+        "passwords_not_match": "Passwords do not match",
+        "email_invalid": "Please enter a valid email",
+        "email_exists": "User with this email already exists",
+        "network_error": "Network error. Please try again."
+      }
+    },
+    "forgot_password": {
+      "title": "Forgot password?",
+      "subtitle": "Enter your email to reset your password",
+      "email": "Email",
+      "reset_button": "Send reset link",
+      "back_to_login": "Back to sign in",
+      "success_message": "Reset link sent to your email",
+      "errors": {
+        "email_required": "Email is required",
+        "email_invalid": "Please enter a valid email",
+        "user_not_found": "User with this email not found",
+        "network_error": "Network error. Please try again."
+      }
+    },
+    "reset_password": {
+      "title": "Reset password",
+      "subtitle": "Enter your new password",
+      "new_password": "New password",
+      "confirm_password": "Confirm password",
+      "reset_button": "Reset password",
+      "back_to_login": "Back to sign in",
+      "success_message": "Password changed successfully",
+      "errors": {
+        "password_required": "Password is required",
+        "password_min_length": "Password must be at least 8 characters",
+        "passwords_not_match": "Passwords do not match",
+        "token_invalid": "Invalid reset link",
+        "token_expired": "Reset link has expired",
+        "network_error": "Network error. Please try again."
+      }
+    },
+    "verify_email": {
+      "title": "Verify your email",
+      "subtitle": "We sent a verification code to your email",
+      "code": "Verification code",
+      "verify_button": "Verify",
+      "resend_code": "Resend code",
+      "back_to_login": "Back to sign in",
+      "success_message": "Email verified successfully",
+      "errors": {
+        "code_required": "Code is required",
+        "code_invalid": "Invalid verification code",
+        "code_expired": "Code has expired",
+        "network_error": "Network error. Please try again."
+      }
+    },
+    "oauth_error": "Google OAuth error",
+    "invalid_callback": "Invalid callback URL",
+    "processing_error": "Error processing authentication",
+    "processing_login": "Processing login...",
+    "redirecting_to_login": "Redirecting to login page..."
+  },
+  "errors": {
+    "auth": {
+      "invalid_credentials": "Invalid email or password",
+      "email_already_exists": "User with this email already exists",
+      "user_not_found": "User not found",
+      "invalid_token": "Invalid token",
+      "token_expired": "Token expired",
+      "insufficient_permissions": "Insufficient permissions",
+      "email_not_verified": "Email not verified"
+    },
+    "validation": {
+      "error": "Validation error",
+      "required_field": "Required field",
+      "invalid_email": "Invalid email format",
+      "invalid_password": "Invalid password",
+      "password_too_short": "Password must be at least 8 characters",
+      "password_too_weak": "Password is too weak"
+    },
+    "site": {
+      "not_found": "Site not found",
+      "not_published": "Site not published",
+      "access_denied": "Access denied to site"
+    },
+    "rsvp": {
+      "submission_failed": "Failed to submit RSVP",
+      "already_submitted": "RSVP already submitted"
+    },
+    "database": {
+      "error": "Database error",
+      "connection_error": "Database connection error"
+    },
+    "oauth": {
+      "google_error": "Google OAuth error"
+    },
+    "email": {
+      "service_error": "Email service error"
+    },
+    "rate_limit": {
+      "exceeded": "Rate limit exceeded"
+    },
+    "server": {
+      "internal_error": "Internal server error",
+      "service_unavailable": "Service temporarily unavailable",
+      "not_found": "Resource not found",
+      "method_not_allowed": "Method not allowed"
+    },
+    "general": {
+      "unknown_error": "Unknown error",
+      "network_error": "Network error",
+      "timeout": "Request timeout"
+    }
+  }
 } 

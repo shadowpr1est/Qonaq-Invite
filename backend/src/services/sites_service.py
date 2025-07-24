@@ -9,11 +9,10 @@ from sqlalchemy import select, func, and_, desc
 from ..models.sites import Site, SiteAnalytics, RSVP
 from ..users.models import User
 from ..schemas.sites import (
-    SiteGenerationRequest, SiteGenerationResponse, SitePreview, 
+    SiteGenerationResponse, SitePreview, 
     SiteUpdate, SiteStatistics, UserSitesResponse, SiteAnalyticsEvent,
     EventType, ThemeStyle, ColorScheme
 )
-from .site_generator import SiteGeneratorService
 from ..utils.slug import generate_slug
 
 logger = logging.getLogger(__name__)
@@ -29,8 +28,100 @@ class SitesService:
         request: dict,
         status_callback: Optional[Callable] = None
     ):
-        # Используем только новую функцию генерации и сохранения
-        return await SitesService.generate_and_save_site(db, user_id, request)
+        """
+        Создает сайт асинхронно через фоновую задачу
+        """
+        try:
+            # Импортируем здесь, чтобы избежать циклического импорта
+            from ..tasks.site_tasks import generate_site_task
+            
+            # Запускаем фоновую задачу
+            task = generate_site_task.delay(str(user_id), request)
+            
+            logger.info(f"Started site generation task: {task.id} for user: {user_id}")
+            
+            # Возвращаем информацию о задаче
+            return {
+                "task_id": task.id,
+                "status": "started",
+                "message": "Генерация сайта началась. Используйте task_id для отслеживания прогресса."
+            }
+            
+        except Exception as e:
+            logger.error(f"Error starting site generation task: {e}")
+            raise
+    
+    @staticmethod
+    async def get_task_status(task_id: str):
+        """
+        Получает статус задачи генерации сайта
+        """
+        try:
+            # Импортируем здесь, чтобы избежать циклического импорта
+            from ..tasks.site_tasks import generate_site_task
+            
+            task = generate_site_task.AsyncResult(task_id)
+            
+            if task.ready():
+                if task.successful():
+                    result = task.get()
+                    return {
+                        "status": "completed",
+                        "result": result,
+                        "progress": 100
+                    }
+                else:
+                    return {
+                        "status": "failed",
+                        "error": str(task.info),
+                        "progress": 0
+                    }
+            else:
+                # Получаем текущий прогресс
+                info = task.info
+                if info:
+                    return {
+                        "status": "in_progress",
+                        "progress": info.get('progress', 0),
+                        "message": info.get('status', 'Обработка...')
+                    }
+                else:
+                    return {
+                        "status": "pending",
+                        "progress": 0,
+                        "message": "Задача в очереди"
+                    }
+                    
+        except Exception as e:
+            logger.error(f"Error getting task status: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "progress": 0
+            }
+    
+    @staticmethod
+    async def generate_preview(event_json: dict):
+        """
+        Генерирует предварительный просмотр сайта
+        """
+        try:
+            # Импортируем здесь, чтобы избежать циклического импорта
+            from ..tasks.site_tasks import generate_preview_task
+            
+            task = generate_preview_task.delay(event_json)
+            
+            logger.info(f"Started preview generation task: {task.id}")
+            
+            return {
+                "task_id": task.id,
+                "status": "started",
+                "message": "Генерация предварительного просмотра началась."
+            }
+            
+        except Exception as e:
+            logger.error(f"Error starting preview generation task: {e}")
+            raise
     
     @staticmethod
     async def get_user_sites(db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100):

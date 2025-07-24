@@ -1,7 +1,31 @@
 {
-  "dependencies": {
-    "i18next": "^25.3.2",
-    "i18next-browser-languagedetector": "^8.2.0",
-    "react-i18next": "^15.6.0"
-  }
-}
+  "name": "invitly",
+  "version": "1.0.0",
+  "description": "InviteAI - платформа для создания приглашений",
+  "private": true,
+  "scripts": {
+    "dev": "docker-compose up",
+    "dev:backend": "cd backend && python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:frontend": "cd frontend/inviteai-spark-invites && npm run dev",
+    "build": "docker-compose build",
+    "build:frontend": "cd frontend/inviteai-spark-invites && npm run build",
+    "start": "docker-compose up -d",
+    "stop": "docker-compose down",
+    "logs": "docker-compose logs -f",
+    "clean": "docker-compose down -v && docker system prune -f",
+    "install:frontend": "cd frontend/inviteai-spark-invites && npm install",
+    "install:backend": "cd backend && pip install -r requirements.txt"
+  },
+  "workspaces": [
+    "frontend/inviteai-spark-invites"
+  ],
+  "keywords": [
+    "invitations",
+    "events",
+    "react",
+    "fastapi",
+    "typescript"
+  ],
+  "author": "Alfred",
+  "license": "MIT"
+} 

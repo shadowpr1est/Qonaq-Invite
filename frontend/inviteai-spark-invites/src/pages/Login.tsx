@@ -5,50 +5,74 @@ import AuthCanvasBackground from '../components/AuthCanvasBackground';
 import Loader from '../components/Loader';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { apiClient } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
+import { ErrorHandler } from '@/lib/errorHandler';
 
 export default function Login() {
-  const { login, isLoading, error, googleOAuth, setUser } = useAuth();
+  const { login, isLoading, error, googleOAuth, setUser, user, isInitialized } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
-  // Classic OAuth: handle tokens in URL
+  // Redirect if already authenticated - but only if user came from login page
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    if (accessToken && refreshToken) {
-      // Save tokens and fetch user info
-      apiClient.setToken(accessToken);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('refresh_token', refreshToken);
+    if (isInitialized && user) {
+      // Check if user came from a specific page that requires dashboard redirect
+      const fromPage = new URLSearchParams(window.location.search).get('from');
+      if (fromPage === 'dashboard' || fromPage === 'builder') {
+      navigate('/dashboard');
+      } else {
+        // Otherwise, let user stay on current page or go to home
+        navigate('/');
       }
-      // Optionally, fetch user info and set user
-      apiClient.getCurrentUser().then(user => {
-        setUser && setUser(user);
-        window.location.replace('/dashboard');
-      });
     }
-  }, []);
+  }, [user, isInitialized, navigate]);
+
+
 
   // Classic OAuth button handler
   const handleClassicGoogleLogin = async () => {
     try {
-      const resp = await fetch(`${import.meta.env.VITE_API_URL}/auth/google-login-url`);
+      // Сохраняем текущий язык в URL для восстановления после OAuth
+      const currentLang = localStorage.getItem('language') || 'ru';
+      const fromPage = new URLSearchParams(window.location.search).get('from');
+      const resp = await fetch(`${import.meta.env.VITE_API_URL}/v1/auth/google-login-url?lang=${currentLang}&from=${fromPage || ''}`);
       const data = await resp.json();
       if (data.url) {
         window.location.href = data.url;
       }
     } catch (e) {
-      alert('Ошибка Google OAuth: не удалось получить ссылку входа.');
+      ErrorHandler.handleNetworkError(e, t);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login({ email, password });
-    navigate('/dashboard');
+    try {
+      await login({ email, password });
+      // Check if user came from a specific page that requires dashboard redirect
+      const fromPage = new URLSearchParams(window.location.search).get('from');
+      if (fromPage === 'dashboard' || fromPage === 'builder') {
+      navigate('/dashboard');
+      } else {
+        // Otherwise, let user stay on current page or go to home
+        navigate('/');
+      }
+    } catch (error) {
+      // Error is already handled by the auth hook
+      console.error('Login failed:', error);
+    }
   };
+
+  // Don't render if user is already authenticated
+  if (!isInitialized) {
+    return <Loader />;
+  }
+
+  if (user) {
+    return <Loader />; // Will redirect to dashboard
+  }
 
     return (
     <div className="min-h-screen flex items-center justify-center bg-white">
@@ -64,7 +88,7 @@ export default function Login() {
           </span>
         </Link>
         {/* <Link to="/" className="mb-4 text-sm text-gray-400 hover:text-indigo-500 transition-colors">← На главную</Link> */}
-        <h1 className="text-3xl font-bold mb-2 text-gray-900">Вход</h1>
+        <h1 className="text-3xl font-bold mb-2 text-gray-900">{t('auth.login.title')}</h1>
         <div className="w-full flex flex-col gap-2 mb-4">
           <button
             type="button"
@@ -79,11 +103,11 @@ export default function Login() {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
-            <span>Войти через Google</span>
+            <span>{t('auth.login.continue_with_google')}</span>
           </button>
           <div className="flex items-center my-2">
             <div className="flex-grow h-px bg-gray-200" />
-            <span className="mx-2 text-gray-400 text-xs">или</span>
+            <span className="mx-2 text-gray-400 text-xs">{t('auth.login.or')}</span>
             <div className="flex-grow h-px bg-gray-200" />
           </div>
         </div>
@@ -92,7 +116,7 @@ export default function Login() {
           <input
             type="email"
             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition bg-white text-gray-900 placeholder-gray-400"
-            placeholder="Email"
+            placeholder={t('auth.login.email')}
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
@@ -101,7 +125,7 @@ export default function Login() {
           <input
             type="password"
             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition bg-white text-gray-900 placeholder-gray-400"
-            placeholder="Пароль"
+            placeholder={t('auth.login.password')}
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
@@ -112,12 +136,12 @@ export default function Login() {
             className="btn btn-primary w-full py-3 rounded-lg font-semibold text-lg bg-indigo-600 hover:bg-indigo-700 text-white transition disabled:opacity-60"
                       disabled={isLoading}
           >
-            {isLoading ? <LoadingSpinner className="mx-auto" /> : 'Войти'}
+            {isLoading ? <LoadingSpinner size="sm" className="mx-auto" /> : t('auth.login.login_button')}
           </button>
                 </form>
         <div className="flex justify-between w-full mt-4 text-sm">
-          <Link to="/forgot-password" className="text-indigo-600 hover:underline">Забыли пароль?</Link>
-          <Link to="/signup" className="text-gray-600 hover:underline">Регистрация</Link>
+          <Link to="/forgot-password" className="text-indigo-600 hover:underline">{t('auth.login.forgot_password')}</Link>
+          <Link to="/signup" className="text-gray-600 hover:underline">{t('auth.login.signup_link')}</Link>
                 </div>
       </div>
     </div>

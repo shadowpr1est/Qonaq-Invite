@@ -4,55 +4,61 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-
-const faqs = [
-  {
-    question: 'Сколько стоит создание приглашения?',
-    answer: 'Базовые шаблоны абсолютно бесплатны. Премиум-шаблоны и дополнительные функции доступны от 990 тенге.',
-    category: 'Оплата'
-  },
-  {
-    question: 'Можно ли изменить текст в приглашении?',
-    answer: 'Да, все тексты полностью редактируются. Вы можете изменить название события, дату, время, место и добавить личное сообщение.',
-    category: 'Общее'
-  },
-  {
-    question: 'Поддерживается ли казахский язык?',
-    answer: 'Конечно! Наш сервис полностью поддерживает казахский и русский языки, включая все специальные символы (Ә, Қ, Ұ и др.).',
-    category: 'Общее'
-  },
-  {
-    question: 'Как гости будут получать приглашения?',
-    answer: 'Вы получите уникальную ссылку и QR-код, которые можно отправить через WhatsApp, Telegram, SMS или любым другим способом.',
-    category: 'Общее'
-  },
-  {
-    question: 'Есть ли аналитика по приглашениям?',
-    answer: 'Да, в премиум-версии доступна статистика: кто просмотрел приглашение, кто подтвердил участие и другие полезные данные.',
-    category: 'Общее'
-  },
-  {
-    question: 'Безопасны ли мои данные?',
-    answer: 'Мы используем современные методы шифрования и не передаём ваши данные третьим лицам. Все приглашения хранятся в защищённой среде.',
-    category: 'Приватность'
-  },
-  {
-    question: 'Можно ли удалить приглашение?',
-    answer: 'Да, вы можете удалить приглашение в любое время через личный кабинет. Все связанные данные будут полностью удалены.',
-    category: 'Приватность'
-  },
-  {
-    question: 'Какие способы оплаты доступны?',
-    answer: 'Принимаем карты Visa/Mastercard, Kaspi Gold, а также мобильные платежи. Все платежи проходят через защищённые каналы.',
-    category: 'Оплата'
-  }
-];
-
-const categories = ['Общее', 'Оплата', 'Приватность'];
+import { useTranslation } from 'react-i18next';
 
 const FAQ = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
-  const [activeCategory, setActiveCategory] = useState<string>('Общее');
+  const [activeCategory, setActiveCategory] = useState<string>('general');
+  const { t } = useTranslation();
+
+  const categories = [
+    { key: 'general', label: t('faq.categories.general') },
+    { key: 'payment', label: t('faq.categories.payment') },
+    { key: 'privacy', label: t('faq.categories.privacy') }
+  ];
+
+  const faqs = [
+    {
+      question: t('faq.questions.0.question'),
+      answer: t('faq.questions.0.answer'),
+      category: 'payment'
+    },
+    {
+      question: t('faq.questions.1.question'),
+      answer: t('faq.questions.1.answer'),
+      category: 'general'
+    },
+    {
+      question: t('faq.questions.2.question'),
+      answer: t('faq.questions.2.answer'),
+      category: 'general'
+    },
+    {
+      question: t('faq.questions.3.question'),
+      answer: t('faq.questions.3.answer'),
+      category: 'general'
+    },
+    {
+      question: t('faq.questions.4.question'),
+      answer: t('faq.questions.4.answer'),
+      category: 'general'
+    },
+    {
+      question: t('faq.questions.5.question'),
+      answer: t('faq.questions.5.answer'),
+      category: 'privacy'
+    },
+    {
+      question: t('faq.questions.6.question'),
+      answer: t('faq.questions.6.answer'),
+      category: 'privacy'
+    },
+    {
+      question: t('faq.questions.7.question'),
+      answer: t('faq.questions.7.answer'),
+      category: 'payment'
+    }
+  ];
 
   const toggleFAQ = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -65,10 +71,10 @@ const FAQ = () => {
       <div className="max-w-4xl mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-4xl lg:text-5xl font-bold font-display mb-6">
-            Часто задаваемые <span className="text-gradient">вопросы</span>
+            {t('faq.title').split(' ').slice(0, 2).join(' ')} <span className="text-gradient">{t('faq.title').split(' ').slice(2).join(' ')}</span>
           </h2>
           <p className="text-xl text-muted-foreground">
-            Ответы на популярные вопросы о нашем сервисе
+            {t('faq.subtitle')}
           </p>
         </div>
 
@@ -76,15 +82,15 @@ const FAQ = () => {
         <div className="flex flex-wrap justify-center gap-2 mb-8">
           {categories.map((category) => (
             <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
+              key={category.key}
+              onClick={() => setActiveCategory(category.key)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                activeCategory === category
+                activeCategory === category.key
                   ? 'bg-gradient-brand text-white shadow-lg'
                   : 'bg-white text-muted-foreground hover:bg-gray-50 border border-gray-200'
               }`}
             >
-              {category}
+              {category.label}
             </button>
           ))}
         </div>
@@ -154,7 +160,7 @@ const FAQ = () => {
             variant="outline"
             className="bg-white border-brand-200 text-brand-600 hover:bg-brand-50 px-6 py-3 rounded-full font-medium shadow-sm"
           >
-            Не нашли ответа? Напишите нам
+            {t('faq.cta')}
           </Button>
         </div>
       </div>

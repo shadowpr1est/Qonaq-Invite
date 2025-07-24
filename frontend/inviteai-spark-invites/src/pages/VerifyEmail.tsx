@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Home
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 type VerificationState = 'loading' | 'success' | 'error' | 'invalid';
 
@@ -29,7 +30,7 @@ const VerifyEmail: React.FC = () => {
     const verifyToken = async () => {
       if (!token) {
         setState('invalid');
-        setErrorMessage('Неверная ссылка верификации');
+        setErrorMessage(t('auth.verify_email.errors.code_invalid'));
         return;
       }
 
@@ -38,7 +39,7 @@ const VerifyEmail: React.FC = () => {
         setState('success');
       } catch (error: any) {
         setState('error');
-        setErrorMessage(error.message || 'Ошибка верификации email');
+        setErrorMessage(error.message || t('auth.verify_email.errors.network_error'));
       }
     };
 
@@ -59,10 +60,10 @@ const VerifyEmail: React.FC = () => {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Проверяем ваш email...
+                {t('auth.verify_email.title')}...
               </h2>
               <p className="text-gray-600">
-                Пожалуйста, подождите, пока мы подтверждаем ваш адрес электронной почты.
+                {t('auth.verify_email.subtitle')}
               </p>
             </div>
           </motion.div>
@@ -80,11 +81,11 @@ const VerifyEmail: React.FC = () => {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                🎉 Email подтвержден!
+                🎉 {t('auth.verify_email.success_message')}!
               </h2>
               <p className="text-gray-600 mb-4">
-                Ваш адрес электронной почты успешно подтвержден. 
-                Теперь вы можете использовать все функции платформы.
+                {t('auth.verify_email.success_message')}. 
+                {t('auth.verify_email.subtitle')}
               </p>
               {user && (
                 <div className="bg-gray-50 rounded-lg p-4 mb-6">

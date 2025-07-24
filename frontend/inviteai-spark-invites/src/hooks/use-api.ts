@@ -74,7 +74,7 @@ export const useApiMutation = <TData, TVariables>(
 export const useAuthApi = () => {
   const login = useApiMutation(
     async (credentials: { email: string; password: string }) => 
-      apiRequest<{ token: string; user: any }>('/auth/login', {
+      apiRequest<{ token: string; user: any }>('/v1/auth/login', {
         method: 'POST',
         body: JSON.stringify(credentials),
       })
@@ -82,7 +82,7 @@ export const useAuthApi = () => {
 
   const register = useApiMutation(
     async (userData: { name: string; email: string; password: string }) =>
-      apiRequest<{ message: string }>('/auth/register', {
+      apiRequest<{ message: string }>('/v1/auth/register', {
         method: 'POST',
         body: JSON.stringify(userData),
       })

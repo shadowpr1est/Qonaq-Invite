@@ -2,34 +2,36 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
-
-const testimonials = [
-  {
-    name: 'Айнур Жакупова',
-    role: 'Организатор мероприятий',
-    content: 'Создала приглашения на свадьбу за 2 минуты! Гости были в восторге от красивого дизайна и удобной QR-ссылки.',
-    rating: 5,
-    avatar: '👰🏻‍♀️'
-  },
-  {
-    name: 'Марат Абдуллин',
-    role: 'Предприниматель',
-    content: 'Использую для всех корпоративных мероприятий. Экономит массу времени, а результат всегда профессиональный.',
-    rating: 5,
-    avatar: '👨🏻‍💼'
-  },
-  {
-    name: 'Дана Сарсенова',
-    role: 'Мама двоих детей',
-    content: 'Детские праздники стали организовывать намного проще! Красивые приглашения готовы за минуту.',
-    rating: 5,
-    avatar: '👩🏻‍🦱'
-  }
-];
+import { useTranslation } from 'react-i18next';
 
 const SocialProof = () => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [inviteCount, setInviteCount] = useState(0);
+  const { t } = useTranslation();
+
+  const testimonials = [
+    {
+      name: t('social_proof.testimonials.0.name'),
+      role: t('social_proof.testimonials.0.role'),
+      content: t('social_proof.testimonials.0.content'),
+      rating: 5,
+      avatar: '👰🏻‍♀️'
+    },
+    {
+      name: t('social_proof.testimonials.1.name'),
+      role: t('social_proof.testimonials.1.role'),
+      content: t('social_proof.testimonials.1.content'),
+      rating: 5,
+      avatar: '👨🏻‍💼'
+    },
+    {
+      name: t('social_proof.testimonials.2.name'),
+      role: t('social_proof.testimonials.2.role'),
+      content: t('social_proof.testimonials.2.content'),
+      rating: 5,
+      avatar: '👩🏻‍🦱'
+    }
+  ];
 
   // Auto-rotate testimonials
   useEffect(() => {
@@ -86,7 +88,7 @@ const SocialProof = () => {
         {/* Left Column - Testimonials Carousel */}
         <div className="space-y-6">
           <h2 className="text-4xl lg:text-5xl font-bold font-display mb-8">
-            Наши <span className="text-gradient">шаблоны</span> и отзывы
+            {t('social_proof.title').split(' ').slice(0, 2).join(' ')} <span className="text-gradient">{t('social_proof.title').split(' ').slice(2).join(' ')}</span>
           </h2>
 
           <div className="relative">
@@ -151,25 +153,25 @@ const SocialProof = () => {
         <div className="text-center lg:text-left">
           <div className="bg-gradient-to-r from-brand-50 to-blue-50 rounded-3xl p-12 shadow-lg">
             <div className="text-6xl mb-6">📊</div>
-            <h3 className="text-2xl font-bold mb-4">Статистика в реальном времени</h3>
+            <h3 className="text-2xl font-bold mb-4">{t('social_proof.stats.title')}</h3>
             
             <div id="invite-counter" className="mb-6">
               <div className="text-5xl font-bold text-gradient mb-2">
                 {inviteCount.toLocaleString('ru-RU')}
               </div>
               <p className="text-xl text-muted-foreground">
-                приглашений уже отправлено
+                {t('social_proof.stats.invitations_sent')}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-center">
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <div className="text-2xl font-bold text-brand-600">150+</div>
-                <div className="text-sm text-muted-foreground">Шаблонов</div>
+                <div className="text-sm text-muted-foreground">{t('social_proof.stats.templates_count')}</div>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <div className="text-2xl font-bold text-brand-600">98%</div>
-                <div className="text-sm text-muted-foreground">Довольных</div>
+                <div className="text-sm text-muted-foreground">{t('social_proof.stats.satisfied_percent')}</div>
               </div>
             </div>
           </div>

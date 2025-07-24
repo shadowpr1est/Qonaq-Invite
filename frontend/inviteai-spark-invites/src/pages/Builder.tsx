@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef, KeyboardEvent } from "react";
+import { useState, useEffect, useRef, KeyboardEvent, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -10,7 +10,6 @@ import {
   Calendar, 
   Palette, 
   Check, 
-  Loader2, 
   ArrowLeft, 
   ArrowRight,
   MapPin,
@@ -37,6 +36,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useTranslation } from 'react-i18next';
+import TwoGISMapPreview from '@/components/TwoGISMapPreview';
 
 type EventType = string;
 
@@ -50,6 +51,7 @@ interface FormState {
   title: string;
   date: string;
   time: string;
+  city: string;
   location: string;
   description: string;
   contactName: string;
@@ -58,50 +60,7 @@ interface FormState {
   rsvp: RSVPState;
 }
 
-const eventTypesList = [
-  { 
-    label: "День рождения", 
-    icon: Cake, 
-    backendValue: "birthday", 
-    color: "from-pink-500 to-rose-500",
-    description: "Праздник в честь дня рождения"
-  },
-  { 
-    label: "Свадьба", 
-    icon: Heart, 
-    backendValue: "wedding", 
-    color: "from-purple-500 to-pink-500",
-    description: "Особенный день для двоих"
-  },
-  { 
-    label: "Корпоратив", 
-    icon: Building2, 
-    backendValue: "corporate", 
-    color: "from-indigo-500 to-blue-500",
-    description: "Деловые встречи и мероприятия"
-  },
-  { 
-    label: "Baby Shower", 
-    icon: Gift, 
-    backendValue: "baby_shower", 
-    color: "from-green-500 to-emerald-500",
-    description: "Праздник в ожидании малыша"
-  },
-  { 
-    label: "Выпускной", 
-    icon: GraduationCap, 
-    backendValue: "graduation", 
-    color: "from-indigo-500 to-blue-500",
-    description: "Праздник окончания учёбы"
-  },
-  { 
-    label: "Годовщина", 
-    icon: Star, 
-    backendValue: "anniversary", 
-    color: "from-orange-500 to-red-500",
-    description: "Отмечаем важную дату"
-  },
-];
+
 
 const siteStyles = [
   { name: "Modern", description: "Clean and contemporary design" },
@@ -111,59 +70,8 @@ const siteStyles = [
   { name: "Rustic", description: "Natural and cozy" }
 ];
 
-// Добавляю список тем для color_preferences, соответствующий enum ColorScheme
-const colorSchemes = [
-  {
-    key: 'romantic_pastels',
-    label: 'Романтические пастели',
-    gradient: 'bg-gradient-to-r from-pink-200 via-pink-100 to-rose-200'
-  },
-  {
-    key: 'vibrant_celebration',
-    label: 'Яркий праздник',
-    gradient: 'bg-gradient-to-r from-yellow-400 via-pink-500 to-red-500'
-  },
-  {
-    key: 'elegant_neutrals',
-    label: 'Элегантные нейтралы',
-    gradient: 'bg-gradient-to-r from-gray-200 via-gray-400 to-gray-600'
-  },
-  {
-    key: 'bold_modern',
-    label: 'Смелый модерн',
-    gradient: 'bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-700'
-  },
-  {
-    key: 'nature_inspired',
-    label: 'Вдохновлён природой',
-    gradient: 'bg-gradient-to-r from-green-400 via-green-200 to-emerald-500'
-  },
-  {
-    key: 'classic_black_white',
-    label: 'Классика: чёрный и белый',
-    gradient: 'bg-gradient-to-r from-black via-gray-700 to-white'
-  },
-  {
-    key: 'warm_autumn',
-    label: 'Тёплая осень',
-    gradient: 'bg-gradient-to-r from-orange-400 via-yellow-600 to-red-400'
-  },
-  {
-    key: 'cool_winter',
-    label: 'Прохладная зима',
-    gradient: 'bg-gradient-to-r from-blue-400 via-blue-200 to-cyan-400'
-  },
-  {
-    key: 'spring_fresh',
-    label: 'Весенняя свежесть',
-    gradient: 'bg-gradient-to-r from-green-200 via-lime-200 to-yellow-200'
-  },
-  {
-    key: 'summer_bright',
-    label: 'Яркое лето',
-    gradient: 'bg-gradient-to-r from-yellow-300 via-orange-300 to-pink-300'
-  },
-];
+
+
 
 // Удаляю colorThemeOptions и все небрендовые цвета
 
@@ -299,7 +207,7 @@ const generateHTML = (siteData: any) => {
                         </div>
                         <div>
                             <h3 class="font-semibold text-gray-900 mb-1">Where</h3>
-                            <p class="text-gray-600">${siteData.content_details.venue_name}</p>
+                            <p class="text-gray-600">${siteData.content_details.city ? siteData.content_details.city + ', ' : ''}${siteData.content_details.venue_name}</p>
                         </div>
                     </div>
                 </div>
@@ -326,6 +234,36 @@ const generateHTML = (siteData: any) => {
                 </div>
             </div>
             ` : ''}
+            
+            ${siteData.content_details.city && siteData.content_details.venue_name ? `
+            <div class="${cardClass}">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Location</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 gradient-bg rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900">${siteData.content_details.venue_name}</h4>
+                            <p class="text-gray-600">${siteData.content_details.city}</p>
+                        </div>
+                    </div>
+                    <div class="w-full h-64 rounded-lg overflow-hidden border border-gray-200">
+                        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
+                            <div class="text-center p-6">
+                                <div class="text-4xl mb-4">📍</div>
+                                <p class="text-lg font-semibold text-gray-800">${siteData.content_details.venue_name}</p>
+                                <p class="text-gray-600">${siteData.content_details.city}</p>
+                                <p class="text-sm text-gray-500 mt-2">Карта будет загружена при создании сайта</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            ` : ''}
         </div>
     </section>
 </body>
@@ -335,42 +273,131 @@ const generateHTML = (siteData: any) => {
 const MIN_RSVP_OPTIONS = 2;
 const DEFAULT_RSVP_OPTIONS = ["Да, приду", "Нет, не приду"];
 
-const initialForm: FormState = {
-  eventType: "Birthday Party",
-  title: "",
-  date: "",
-  time: "",
-  location: "",
-  description: "",
-  contactName: "",
-  contactPhone: "",
-  contactEmail: "",
-  rsvp: { enabled: false, options: [...DEFAULT_RSVP_OPTIONS] }
-};
 
-const stepTitles = ["Выберите шаблон", "Детали события", "Стилизация и предпросмотр"];
-const stepSubtitles = [
-  "Выберите из профессиональных шаблонов мероприятий",
-  "Заполните информацию о событии и контакты",
-  "Выберите стиль и посмотрите предпросмотр"
-];
+
+
 
 const LOCAL_STORAGE_KEY = "invitly-builder-draft";
 
-const validateForm = (form: FormState) => {
+const validateForm = (form: FormState, t: any) => {
   const errors: Record<string, string> = {};
-  if (!form.title.trim()) errors.title = "Title is required.";
-  if (!form.date.trim()) errors.date = "Date is required.";
-  if (!form.location.trim()) errors.location = "Location is required.";
+  if (!form.title?.trim()) errors.title = "Title is required.";
+  if (!form.date?.trim()) errors.date = "Date is required.";
+  if (!form.city?.trim()) errors.city = t('builder.validation.city_required');
+  if (!form.location?.trim()) errors.location = t('builder.validation.location_required');
   if (form.rsvp.enabled) {
     form.rsvp.options.forEach((opt, idx) => {
-      if (!opt.trim()) errors[`rsvp_${idx}`] = "Option cannot be empty.";
+      if (!opt?.trim()) errors[`rsvp_${idx}`] = "Option cannot be empty.";
     });
   }
   return errors;
 };
 
 const Builder = () => {
+  const { t } = useTranslation();
+  
+  const eventTypesList = useMemo(() => [
+    { 
+      label: t('builder.event_types.birthday'), 
+      icon: Cake, 
+      backendValue: "birthday", 
+      color: "from-pink-500 to-rose-500",
+      description: t('builder.event_types.birthday_description')
+    },
+    { 
+      label: t('builder.event_types.wedding'), 
+      icon: Heart, 
+      backendValue: "wedding", 
+      color: "from-purple-500 to-pink-500",
+      description: t('builder.event_types.wedding_description')
+    },
+    { 
+      label: t('builder.event_types.corporate'), 
+      icon: Building2, 
+      backendValue: "corporate", 
+      color: "from-indigo-500 to-blue-500",
+      description: t('builder.event_types.corporate_description')
+    },
+    { 
+      label: t('builder.event_types.baby_shower'), 
+      icon: Gift, 
+      backendValue: "baby_shower", 
+      color: "from-green-500 to-emerald-500",
+      description: t('builder.event_types.baby_shower_description')
+    },
+    { 
+      label: t('builder.event_types.graduation'), 
+      icon: GraduationCap, 
+      backendValue: "graduation", 
+      color: "from-indigo-500 to-blue-500",
+      description: t('builder.event_types.graduation_description')
+    },
+    { 
+      label: t('builder.event_types.anniversary'), 
+      icon: Star, 
+      backendValue: "anniversary", 
+      color: "from-orange-500 to-red-500",
+      description: t('builder.event_types.anniversary_description')
+    },
+  ], [t]);
+  
+  const initialForm = useMemo(() => ({
+    eventType: "",
+    title: "",
+    date: "",
+    time: "",
+    city: "",
+    location: "",
+    description: "",
+    contactName: "",
+    contactPhone: "",
+    contactEmail: "",
+    rsvp: { enabled: false, options: [t('builder.form.rsvp_options.yes'), t('builder.form.rsvp_options.no')] }
+  }), [t]);
+  
+  const colorSchemes = useMemo(() => [
+    {
+      key: 'romantic_pastels',
+      label: t('builder.color_schemes.romantic_pastels'),
+      gradient: 'bg-gradient-to-r from-pink-200 via-pink-100 to-rose-200'
+    },
+    {
+      key: 'vibrant_celebration',
+      label: t('builder.color_schemes.vibrant_celebration'),
+      gradient: 'bg-gradient-to-r from-yellow-400 via-pink-500 to-red-500'
+    },
+    {
+      key: 'elegant_neutrals',
+      label: t('builder.color_schemes.elegant_neutrals'),
+      gradient: 'bg-gradient-to-r from-gray-200 via-gray-400 to-gray-600'
+    },
+    {
+      key: 'bold_modern',
+      label: t('builder.color_schemes.bold_modern'),
+      gradient: 'bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-700'
+    },
+    {
+      key: 'nature_inspired',
+      label: t('builder.color_schemes.nature_inspired'),
+      gradient: 'bg-gradient-to-r from-green-400 via-green-200 to-emerald-500'
+    },
+    {
+      key: 'classic_black_white',
+      label: t('builder.color_schemes.classic_black_white'),
+      gradient: 'bg-gradient-to-r from-black via-gray-700 to-white'
+    },
+    {
+      key: 'warm_autumn',
+      label: t('builder.color_schemes.warm_autumn'),
+      gradient: 'bg-gradient-to-r from-orange-400 via-yellow-600 to-red-400'
+    },
+    {
+      key: 'cool_winter',
+      label: t('builder.color_schemes.cool_winter'),
+      gradient: 'bg-gradient-to-r from-blue-400 via-blue-200 to-cyan-400'
+    },
+  ], [t]);
+  
   const styleMap: Record<string, string> = {
     Modern: 'modern',
     Minimalist: 'minimalist',
@@ -382,22 +409,75 @@ const Builder = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [form, setForm] = useState<FormState>(() => {
     const draft = localStorage.getItem(LOCAL_STORAGE_KEY);
-    return draft ? JSON.parse(draft) : initialForm;
+    if (draft) {
+      try {
+        const parsed = JSON.parse(draft);
+        // Убеждаемся что все поля инициализированы
+        return { 
+          ...initialForm, 
+          ...parsed,
+          city: parsed.city || "",
+          location: parsed.location || ""
+        };
+      } catch {
+        return initialForm;
+      }
+    }
+    return initialForm;
   });
+
+  // Fix RSVP options translation when loading from localStorage
+  useEffect(() => {
+    const draft = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (draft) {
+      try {
+        const parsed = JSON.parse(draft);
+        // Check if RSVP options are translation keys instead of translated text
+        if (parsed.rsvp && parsed.rsvp.options) {
+          const needsTranslation = parsed.rsvp.options.some((option: string) => 
+            option.includes('builder.form.rsvp_options.')
+          );
+          
+          if (needsTranslation) {
+            setForm(prev => ({
+              ...prev,
+              rsvp: {
+                ...prev.rsvp,
+                options: [t('builder.form.rsvp_options.yes'), t('builder.form.rsvp_options.no')]
+              }
+            }));
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to parse draft from localStorage:', error);
+      }
+    }
+  }, [t]);
+  
   const [selectedTemplate, setSelectedTemplate] = useState(() => {
     const draft = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (draft) {
-      const parsed = JSON.parse(draft);
-      const idx = eventTypesList.findIndex(e => e.label === parsed.eventType);
-      return idx !== -1 ? idx : 0;
+      try {
+        const parsed = JSON.parse(draft);
+        const idx = eventTypesList.findIndex(e => e.label === parsed.eventType);
+        return idx !== -1 ? idx : 0;
+      } catch (error) {
+        console.warn('Failed to parse draft from localStorage:', error);
+        return 0;
+      }
     }
     return 0;
   });
   const [selectedStyle, setSelectedStyle] = useState(() => {
     const draft = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (draft) {
-      const parsed = JSON.parse(draft);
-      return parsed.selectedStyle || siteStyles[0].name;
+      try {
+        const parsed = JSON.parse(draft);
+        return parsed.selectedStyle || siteStyles[0].name;
+      } catch (error) {
+        console.warn('Failed to parse draft from localStorage:', error);
+        return siteStyles[0].name;
+      }
     }
     return siteStyles[0].name;
   });
@@ -405,15 +485,19 @@ const Builder = () => {
   const [selectedColor, setSelectedColor] = useState(() => {
     const draft = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (draft) {
-      const parsed = JSON.parse(draft);
-      return parsed.selectedColor || 'bold_modern';
+      try {
+        const parsed = JSON.parse(draft);
+        return parsed.selectedColor || 'bold_modern';
+      } catch (error) {
+        console.warn('Failed to parse draft from localStorage:', error);
+        return 'bold_modern';
+      }
     }
     return 'bold_modern';
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const navigate = useNavigate();
@@ -421,30 +505,47 @@ const Builder = () => {
 
   // Redirect if not authenticated
   useEffect(() => {
-    if (isInitialized && !user) navigate('/login');
+    if (isInitialized && !user) navigate('/login?from=builder');
   }, [user, isInitialized, navigate]);
 
   // Auto-save draft
   useEffect(() => {
+    // Ensure RSVP options are translated before saving
+    const formToSave = {
+      ...form,
+      rsvp: {
+        ...form.rsvp,
+        options: form.rsvp.options.map((option, index) => {
+          // If it's a translation key, translate it
+          if (option.includes('builder.form.rsvp_options.')) {
+            return index === 0 ? t('builder.form.rsvp_options.yes') : t('builder.form.rsvp_options.no');
+          }
+          return option;
+        })
+      },
+      selectedStyle,
+      selectedColor
+    };
+    
     localStorage.setItem(
       LOCAL_STORAGE_KEY,
-      JSON.stringify({ ...form, selectedStyle, selectedColor })
+      JSON.stringify(formToSave)
     );
-  }, [form, selectedStyle, selectedColor]);
+  }, [form, selectedStyle, selectedColor, t]);
 
   // Clear draft on finish
   const clearDraft = () => localStorage.removeItem(LOCAL_STORAGE_KEY);
 
   // Validation
   useEffect(() => {
-    setErrors(validateForm(form));
-  }, [form]);
+    setErrors(validateForm(form, t));
+  }, [form, t]);
 
   const canNext = () => {
     if (currentStep === 0) return selectedTemplate !== undefined;
     if (currentStep === 1) {
-      const errs = validateForm(form);
-      return !errs.title && !errs.date && !errs.location && Object.keys(errs).filter(k=>k.startsWith('rsvp_')).length === 0;
+      const errs = validateForm(form, t);
+      return !errs.title && !errs.date && !errs.city && !errs.location && Object.keys(errs).filter(k=>k.startsWith('rsvp_')).length === 0;
     }
     return true;
   };
@@ -463,17 +564,12 @@ const Builder = () => {
   };
 
   const handleNext = async () => {
-    if (currentStep === 1) setTouched({ title: true, date: true, location: true });
+    if (currentStep === 1) setTouched({ title: true, date: true, city: true, location: true });
     if (!canNext()) return;
     if (currentStep < 2) setCurrentStep(currentStep + 1);
     else {
       setIsLoading(true);
-      setProgress(0);
       try {
-        for (let i = 1; i <= 100; i++) {
-          await new Promise(res => setTimeout(res, 100)); // 100*100=10000мс = 10 секунд
-          setProgress(i);
-        }
         const siteRequest = {
           event_type: eventTypesList.find(e => e.label === form.eventType)?.backendValue || 'other',
           theme: styleMap[selectedStyle] || 'modern',
@@ -482,6 +578,7 @@ const Builder = () => {
             event_title: form.title,
             event_date: form.date,
             event_time: form.time,
+            city: form.city,
             venue_name: form.location,
             description: form.description && form.description.trim().length > 0
               ? form.description
@@ -501,7 +598,6 @@ const Builder = () => {
         toast.error('Error creating invitation. Please try again.');
       } finally {
         setIsLoading(false);
-        setProgress(0);
       }
     }
   };
@@ -544,7 +640,7 @@ const Builder = () => {
 
   // Stepper-компонент
   const Stepper = ({ currentStep, onStepClick }: { currentStep: number; onStepClick: (step: number) => void }) => (
-    <div className="flex justify-center items-center gap-0 mt-6 select-none">
+    <div className="flex justify-center items-center gap-0 mt-2 select-none">
       {[0,1,2].map(idx => (
         <div key={idx} className="flex items-center">
           <button
@@ -580,10 +676,10 @@ const Builder = () => {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 pt-24">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 pt-16">
         <div className="container mx-auto px-4 py-6 lg:py-12">
           {/* Header */}
-          <div className="text-center mb-8 lg:mb-12">
+          <div className="text-center mb-4 lg:mb-8">
             {/* Убираю текстовые подписи шагов */}
             <Stepper currentStep={currentStep} onStepClick={step => setCurrentStep(step)} />
           </div>
@@ -638,13 +734,13 @@ const Builder = () => {
                       <div className="space-y-2">
                         <label className="text-sm font-medium flex items-center gap-2">
                           <PartyPopper className="w-4 h-4 text-indigo-500" />
-                          Название события *
+                          {t('builder.form.event_title')} *
                         </label>
                         <input
                           className={`w-full p-4 border-2 rounded-xl bg-background/50 backdrop-blur-sm text-lg transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 ${
                             errors.title && touched.title ? "border-destructive" : "border-border"
                           }`}
-                          placeholder="Назовите ваше событие..."
+                          placeholder={t('builder.form.event_title_placeholder')}
                           value={form.title}
                           onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                           onBlur={() => handleFieldBlur("title")}
@@ -659,7 +755,7 @@ const Builder = () => {
                         <div className="space-y-2">
                           <label className="text-sm font-medium flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-indigo-500" />
-                            Дата события *
+                            {t('builder.form.event_date')} *
                           </label>
                           <input
                             className={`w-full p-4 border-2 rounded-xl bg-background/50 backdrop-blur-sm text-lg transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 ${
@@ -677,7 +773,7 @@ const Builder = () => {
                         <div className="space-y-2">
                           <label className="text-sm font-medium flex items-center gap-2">
                             <Clock className="w-4 h-4 text-indigo-500" />
-                            Время
+                            {t('builder.form.event_time')}
                           </label>
                           <input
                             className="w-full p-4 border-2 rounded-xl bg-background/50 backdrop-blur-sm text-lg transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
@@ -688,17 +784,35 @@ const Builder = () => {
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-medium flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-indigo-500" />
-                            Место проведения *
+                            <Building2 className="w-4 h-4 text-indigo-500" />
+                            {t('builder.form.city')} *
                           </label>
                           <input
                             className={`w-full p-4 border-2 rounded-xl bg-background/50 backdrop-blur-sm text-lg transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 ${
-                              errors.location && touched.location ? "border-destructive" : "border-border"
+                              errors.city && touched.city ? "border-destructive" : "border-border"
                             }`}
-                            placeholder="Где пройдет событие?"
+                            type="text"
+                            placeholder={t('builder.form.city_placeholder')}
+                            value={form.city}
+                            onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+                            onBlur={() => handleFieldBlur("city")}
+                          />
+                          {errors.city && touched.city && (
+                            <p className="text-sm text-destructive">{errors.city}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-indigo-500" />
+                            {t('builder.form.location')} *
+                          </label>
+                          <input
+                            type="text"
                             value={form.location}
-                            onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+                            onChange={(e) => setForm(f => ({ ...f, location: e.target.value }))}
                             onBlur={() => handleFieldBlur("location")}
+                            placeholder={t('builder.form.location_placeholder')}
+                            className="w-full p-4 border-2 rounded-xl bg-background/50 backdrop-blur-sm text-lg transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                           />
                           {errors.location && touched.location && (
                             <p className="text-sm text-destructive">{errors.location}</p>
@@ -710,11 +824,11 @@ const Builder = () => {
                       <div className="space-y-2">
                         <label className="text-sm font-medium flex items-center gap-2">
                           <FileText className="w-4 h-4 text-indigo-500" />
-                          Описание
+                          {t('builder.form.description')}
                         </label>
                         <textarea
                           className="w-full p-4 border-2 rounded-xl bg-background/50 backdrop-blur-sm min-h-[120px] text-lg transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
-                          placeholder="Расскажите гостям, что ожидать..."
+                          placeholder={t('builder.form.description_placeholder')}
                           value={form.description}
                           onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                         />
@@ -726,14 +840,14 @@ const Builder = () => {
                       <div className="space-y-4">
                         <h3 className="text-lg font-semibold flex items-center gap-2">
                           <User className="w-5 h-5 text-indigo-500" />
-                          Контактная информация
+                          {t('builder.form.contact_information')}
                         </h3>
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                           <div className="space-y-2">
-                            <label className="text-sm font-medium">Имя</label>
+                            <label className="text-sm font-medium">{t('builder.form.contact_name')}</label>
                             <input
                               className="w-full p-3 border-2 rounded-xl bg-background/50 backdrop-blur-sm transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                              placeholder="Контактное лицо"
+                              placeholder={t('builder.form.contact_name_placeholder')}
                               value={form.contactName}
                               onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))}
                             />
@@ -741,11 +855,11 @@ const Builder = () => {
                           <div className="space-y-2">
                             <label className="text-sm font-medium flex items-center gap-1">
                               <Phone className="w-3 h-3" />
-                              Телефон
+                              {t('builder.form.contact_phone')}
                             </label>
                             <input
                               className="w-full p-3 border-2 rounded-xl bg-background/50 backdrop-blur-sm transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                              placeholder="Номер телефона"
+                              placeholder={t('builder.form.contact_phone_placeholder')}
                               value={form.contactPhone}
                               onChange={e => setForm(f => ({ ...f, contactPhone: e.target.value }))}
                             />
@@ -758,7 +872,7 @@ const Builder = () => {
                             <input
                               className="w-full p-3 border-2 rounded-xl bg-background/50 backdrop-blur-sm transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                               type="email"
-                              placeholder="Адрес электронной почты"
+                              placeholder={t('builder.form.contact_email_placeholder')}
                               value={form.contactEmail}
                               onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))}
                             />
@@ -780,13 +894,13 @@ const Builder = () => {
                           />
                           <label htmlFor="rsvp-enabled" className="text-lg font-semibold flex items-center gap-2">
                             <Users className="w-5 h-5 text-indigo-500" />
-                            Включить RSVP
+                            {t('builder.form.rsvp.enable')}
                           </label>
                         </div>
                         
                         {form.rsvp.enabled && (
                           <div className="space-y-3 p-4 bg-indigo-50 rounded-xl border border-indigo-200">
-                            <h4 className="font-medium">Опции RSVP</h4>
+                            <h4 className="font-medium">{t('builder.form.rsvp.options_title')}</h4>
                             {form.rsvp.options.map((option, idx) => (
                               <div key={idx} className="flex items-center gap-3">
                                 <input
@@ -796,7 +910,7 @@ const Builder = () => {
                                   value={option}
                                   onChange={e => handleRSVPOptionChange(idx, e.target.value)}
                                   onBlur={() => setTouched(t => ({ ...t, [`rsvp_${idx}`]: true }))}
-                                  placeholder={`Опция ${idx + 1}`}
+                                  placeholder={t('builder.form.rsvp.option_placeholder', { number: idx + 1 })}
                                   disabled={idx < MIN_RSVP_OPTIONS}
                                 />
                                 {form.rsvp.options.length > MIN_RSVP_OPTIONS && idx >= MIN_RSVP_OPTIONS && (
@@ -820,7 +934,7 @@ const Builder = () => {
                               onClick={() => setForm(f => ({ ...f, rsvp: { ...f.rsvp, options: [...f.rsvp.options, ""] } }))}
                             >
                               <Plus className="w-4 h-4 mr-2" />
-                              Добавить опцию
+                              {t('builder.form.rsvp.add_option')}
                             </Button>
                           </div>
                         )}
@@ -841,7 +955,7 @@ const Builder = () => {
                         <div className="space-y-4">
                           <h3 className="text-xl font-semibold flex items-center gap-2">
                             <Palette className="w-5 h-5 text-indigo-500" />
-                            Цветовая схема
+                            {t('builder.styling.color_scheme')}
                           </h3>
                           <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-2 2xl:grid-cols-4 gap-3">
                             {colorSchemes.map(scheme => (
@@ -868,7 +982,7 @@ const Builder = () => {
 
                         {/* Site Styles */}
                         <div className="space-y-4">
-                          <h3 className="text-xl font-semibold">Стиль сайта</h3>
+                          <h3 className="text-xl font-semibold">{t('builder.styling.site_style')}</h3>
                           <div className="space-y-3">
                             {siteStyles.map((style) => (
                               <button
@@ -904,14 +1018,14 @@ const Builder = () => {
                           <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
                           <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                         </div>
-                        <Badge variant="secondary" className="text-xs">Предпросмотр</Badge>
+                        <Badge variant="secondary" className="text-xs">{t('builder.preview.preview')}</Badge>
                         <Button
                           variant="ghost"
                           size="sm"
                           className="lg:hidden"
                           onClick={() => setShowPreview(!showPreview)}
                         >
-                          {showPreview ? "Скрыть" : "Показать"} предпросмотр
+                          {showPreview ? t('builder.preview.hide') : t('builder.preview.show')} {t('builder.preview.preview')}
                         </Button>
                       </div>
                       <div className={`${showPreview ? "block" : "hidden lg:block"}`}>
@@ -922,11 +1036,12 @@ const Builder = () => {
                             theme: styleMap[selectedStyle] || 'modern',
                             color_preferences: selectedColor,
                             content_details: {
-                              event_title: form.title || "Ваше замечательное событие",
+                              event_title: form.title || t('builder.preview.default_title'),
                               event_date: form.date || "2024-12-31",
                               event_time: form.time || "",
-                              venue_name: form.location || "Красивое место",
-                              description: form.description || "Приглашаем вас на незабываемое торжество!",
+                              city: form.city || "",
+                              venue_name: form.location || t('builder.preview.default_location'),
+                              description: form.description || t('builder.preview.default_description'),
                               contact_name: form.contactName,
                               contact_phone: form.contactPhone,
                               contact_email: form.contactEmail,
@@ -934,9 +1049,32 @@ const Builder = () => {
                               rsvp_options: form.rsvp.options,
                             },
                           })}
-                          className="w-full h-[600px] border-0"
+                          className="w-full h-[500px] border-0"
                           sandbox="allow-scripts allow-same-origin"
                         />
+                        
+                        {/* Map Preview */}
+                        {(form.city || form.location) && (
+                          <div className="p-4 border-t border-gray-200">
+                            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              Карта локации
+                            </h3>
+                            <TwoGISMapPreview
+                              location={`${form.city ? form.city + ', ' : ''}${form.location}`}
+                              title={form.title || "Место проведения"}
+                              height="200px"
+                              className="rounded-lg"
+                            />
+                            {/* Debug info */}
+                            <div className="mt-2 text-xs text-gray-500">
+                              Debug: {`${form.city ? form.city + ', ' : ''}${form.location}`}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </Card>
                   </div>
@@ -955,7 +1093,7 @@ const Builder = () => {
               className="flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              {currentStep === 0 ? "Отмена" : "Назад"}
+              {currentStep === 0 ? t('builder.navigation.cancel') : t('builder.navigation.back')}
             </Button>
             
             <Button 
@@ -967,11 +1105,11 @@ const Builder = () => {
               {currentStep === 2 ? (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  Создать приглашение
+                  {t('builder.navigation.create_invitation')}
                 </>
               ) : (
                 <>
-                  Далее
+                  {t('builder.navigation.next')}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -981,8 +1119,7 @@ const Builder = () => {
           {isLoading && (
             <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
               <div className="w-full max-w-md flex flex-col items-center justify-center gap-6">
-                <span className="text-lg text-gray-500 font-medium mb-2">Создание вашего приглашения...</span>
-                <Progress value={progress} className="h-3 w-full" />
+                <LoadingSpinner size="xl" text={t('builder.creating_invitation')} />
               </div>
             </div>
           )}
