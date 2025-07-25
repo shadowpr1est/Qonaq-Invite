@@ -360,7 +360,7 @@ const Profile = () => {
                           <div className="flex gap-3">
                             <Button type="submit" disabled={isLoading}>
                               <Save className="w-4 h-4 mr-2" />
-                              {isLoading ? 'Сохранение...' : 'Сохранить'}
+                              {isLoading ? t('common.saving') : t('common.save')}
                             </Button>
                             <Button 
                               type="button" 
@@ -398,7 +398,7 @@ const Profile = () => {
                 {statsLoading ? (
                   <Card>
                     <CardContent className="p-6">
-                      <div className="text-center">Загрузка статистики...</div>
+                      <div className="text-center">{t('common.loading_stats')}</div>
                     </CardContent>
                   </Card>
                 ) : userStats ? (
@@ -519,7 +519,7 @@ const Profile = () => {
                   </CardHeader>
                   <CardContent>
                     {analyticsLoading ? (
-                      <div className="text-center py-8 text-gray-500">Загрузка аналитики...</div>
+                      <div className="text-center py-8 text-gray-500">{t('common.loading_analytics')}</div>
                     ) : siteAnalytics.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">Нет данных по приглашениям</div>
                     ) : (
@@ -613,7 +613,7 @@ const Profile = () => {
                         />
 
                         <Button type="submit" disabled={isLoading}>
-                          {isLoading ? 'Изменение...' : 'Изменить пароль'}
+                          {isLoading ? t('common.changing') : t('profile.change_password')}
                         </Button>
                       </form>
                     </Form>

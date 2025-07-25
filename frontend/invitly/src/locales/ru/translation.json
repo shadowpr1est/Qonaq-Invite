@@ -111,12 +111,17 @@
       "event_title": "Название события",
       "event_date": "Дата события",
       "event_time": "Время",
+      "city": "Город",
       "location": "Место проведения",
       "description": "Описание",
       "contact_information": "Контактная информация",
       "contact_name": "Имя",
       "contact_phone": "Телефон",
+      "contact_email": "Email",
       "event_title_placeholder": "Назовите ваше событие...",
+      "event_date_placeholder": "Выберите дату события",
+      "event_time_placeholder": "Выберите время события",
+      "city_placeholder": "Введите город...",
       "location_placeholder": "Где пройдет событие?",
       "description_placeholder": "Расскажите гостям, что ожидать...",
       "contact_name_placeholder": "Контактное лицо",
@@ -131,6 +136,66 @@
       "rsvp_options": {
         "yes": "Да, приду",
         "no": "Нет, не приду"
+      },
+      "additional_options": {
+        "title": "Дополнительные опции",
+        "subtitle": "Сделайте ваше приглашение еще более особенным",
+        "timeline": {
+          "title": "Программа мероприятия",
+          "subtitle": "Создайте расписание событий",
+          "add_event": "Добавить событие",
+          "time": "Время",
+          "event_title": "Название события",
+          "description": "Описание",
+          "remove": "Удалить",
+          "events_added": "событий добавлено"
+        },
+        "dress_code": {
+          "title": "Дресс-код",
+          "subtitle": "Укажите предпочтительный стиль одежды",
+          "formal": "Формальный",
+          "casual": "Кэжуал",
+          "business": "Деловой",
+          "costume": "Костюм",
+          "smart_casual": "Смарт-кэжуал",
+          "elegant": "Элегантный",
+          "formal_desc": "Костюм, платье",
+          "casual_desc": "Повседневная одежда",
+          "business_desc": "Деловой костюм",
+          "costume_desc": "Тематические костюмы",
+          "smart_casual_desc": "Умная повседневная одежда",
+          "elegant_desc": "Элегантные наряды"
+        },
+        "gallery": {
+          "title": "Галерея",
+          "subtitle": "Добавьте фотографии для приглашения",
+          "upload": "Загрузить фото",
+          "drag_drop": "Перетащите файлы сюда или нажмите для выбора",
+          "max_files": "Максимум 10 файлов",
+          "remove": "Удалить",
+          "photos_added": "фото добавлено"
+        },
+        "background_music": {
+          "title": "Фоновая музыка",
+          "subtitle": "Выберите музыку для приглашения",
+          "none": "Без музыки",
+          "romantic": "Романтичная",
+          "party": "Вечеринка",
+          "elegant": "Элегантная",
+          "fun": "Веселая"
+        },
+        "wishes": {
+          "title": "Пожелания гостям",
+          "subtitle": "Добавьте персональное сообщение",
+          "placeholder": "Напишите ваши пожелания гостям...",
+          "examples": "Примеры: «Приходите с хорошим настроением», «Не забудьте фотоаппарат»",
+          "added": "Пожелания добавлены"
+        },
+        "background": {
+          "title": "Фон или фото для сайта",
+          "subtitle": "Добавьте фон или фото на ваш сайт",
+          "added": "Фон добавлен"
+        }
       }
     },
     "preview": {
@@ -150,6 +215,36 @@
       "back": "Назад",
       "next": "Далее",
       "create_invitation": "Создать приглашение"
+    },
+    "loading": {
+      "creating_design": "Создаем дизайн...",
+      "optimizing_layout": "Оптимизируем макет...",
+      "adding_animations": "Добавляем анимации...",
+      "preparing_content": "Подготавливаем контент...",
+      "finalizing_design": "Завершаем дизайн...",
+      "almost_ready": "Почти готово...",
+      "creating_magic": "Создаем магию...",
+      "assembling_pieces": "Собираем элементы...",
+      "adding_finishing_touches": "Добавляем финальные штрихи...",
+      "preparing_for_launch": "Готовим к запуску...",
+      "generating_unique_design": "Генерируем уникальный дизайн...",
+      "optimizing_performance": "Оптимизируем производительность...",
+      "adding_interactive_elements": "Добавляем интерактивные элементы...",
+      "creating_responsive_layout": "Создаем адаптивную верстку...",
+      "finalizing_details": "Завершаем детали...",
+      "please_wait": "Пожалуйста, подождите. Мы создаем для вас уникальное приглашение!"
+    },
+    "validation": {
+      "title_required": "Название события обязательно",
+      "date_required": "Дата события обязательна",
+      "city_required": "Город обязателен",
+      "location_required": "Место проведения обязательно",
+      "contact_name_required": "Имя контактного лица обязательно",
+      "contact_phone_required": "Телефон обязателен",
+      "contact_email_required": "Email обязателен",
+      "rsvp_option_required": "Опция RSVP обязательна",
+      "invalid_email": "Неверный формат email",
+      "invalid_phone": "Неверный формат телефона"
     }
   },
   
@@ -346,6 +441,11 @@
   
   "common": {
     "loading": "Загрузка...",
+    "saving": "Сохранение...",
+    "changing": "Изменение...",
+    "loading_stats": "Загрузка статистики...",
+    "loading_analytics": "Загрузка аналитики...",
+    "loading_map": "Загрузка карты...",
     "error": "Произошла ошибка",
     "success": "Успешно",
     "save": "Сохранить",
@@ -381,6 +481,46 @@
     "password_match": "Пароли не совпадают",
     "invalid_format": "Неверный формат"
   },
+
+  "calendar": {
+    "select_date": "Выберите дату",
+    "today": "Сегодня",
+    "tomorrow": "Завтра",
+    "january": "Январь",
+    "february": "Февраль",
+    "march": "Март",
+    "april": "Апрель",
+    "may": "Май",
+    "june": "Июнь",
+    "july": "Июль",
+    "august": "Август",
+    "september": "Сентябрь",
+    "october": "Октябрь",
+    "november": "Ноябрь",
+    "december": "Декабрь",
+    "mon": "Пн",
+    "tue": "Вт",
+    "wed": "Ср",
+    "thu": "Чт",
+    "fri": "Пт",
+    "sat": "Сб",
+    "sun": "Вс"
+  },
+
+  "time": {
+    "select_time": "Выберите время",
+    "quick_select": "Быстрый выбор",
+    "custom_time": "Свое время",
+    "morning": "Утро",
+    "noon": "Полдень",
+    "afternoon": "День",
+    "evening": "Вечер",
+    "night": "Ночь",
+    "hours": "Часы",
+    "minutes": "Минуты",
+    "am": "до полудня",
+    "pm": "после полудня"
+  },
   
   "notifications": {
     "invitation_created": "Приглашение создано успешно",
@@ -389,7 +529,8 @@
     "profile_updated": "Профиль обновлен",
     "password_changed": "Пароль изменен",
     "email_sent": "Email отправлен",
-    "changes_saved": "Изменения сохранены"
+    "changes_saved": "Изменения сохранены",
+    "invitation_creation_error": "Ошибка создания приглашения. Попробуйте еще раз."
   },
   
   "faq": {

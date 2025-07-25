@@ -47,7 +47,12 @@ class ApiClient {
 
   private loadToken() {
     if (typeof window !== 'undefined') {
-      this.authToken = localStorage.getItem('access_token');
+      const token = localStorage.getItem('access_token');
+      this.authToken = token;
+      console.log('loadToken called:', { 
+        hasToken: !!token, 
+        tokenLength: token?.length || 0 
+      });
     }
   }
 
@@ -472,14 +477,24 @@ class ApiClient {
     const hasAuthToken = !!this.authToken;
     const hasLocalToken = typeof window !== 'undefined' && !!localStorage.getItem('access_token');
     
-    console.log('isAuthenticated check:', { hasAuthToken, hasLocalToken });
+    console.log('isAuthenticated check:', { 
+      hasAuthToken, 
+      hasLocalToken,
+      authTokenLength: this.authToken?.length || 0,
+      localTokenLength: typeof window !== 'undefined' ? localStorage.getItem('access_token')?.length || 0 : 0
+    });
     
-    if (this.authToken) return true;
-    if (typeof window !== 'undefined') {
+    // Синхронизируем токен из localStorage если его нет в памяти
+    if (!this.authToken && typeof window !== 'undefined') {
       const localToken = localStorage.getItem('access_token');
-      return !!localToken;
+      if (localToken) {
+        console.log('Syncing token from localStorage to memory');
+        this.authToken = localToken;
+        return true;
+      }
     }
-    return false;
+    
+    return !!this.authToken;
   }
 
   // Helper method for non-JSON requests

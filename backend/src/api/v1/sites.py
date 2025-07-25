@@ -415,8 +415,7 @@ async def view_public_site(
             raise_site_not_found()
         
         # Отладочная информация
-        print(f"🔍 DEBUG: site_structure = {site.site_structure}")
-        print(f"📊 DEBUG: site_structure type = {type(site.site_structure)}")
+
         
         # Проверяем, является ли site_structure строкой JSON
         if isinstance(site.site_structure, str):
@@ -426,9 +425,7 @@ async def view_public_site(
             site_structure = site.site_structure
         
         site_data = site_structure.get('event_json', {})
-        print(f"🔍 DEBUG: site_data = {site_data}")
-        print(f"📊 DEBUG: site_data type = {type(site_data)}")
-        print(f"🔑 DEBUG: site_data keys = {list(site_data.keys()) if site_data else 'None'}")
+
         
         try:
             # Используем site_generator для генерации React компонента
@@ -459,10 +456,10 @@ async def view_public_site(
             </html>
             """
             
-            print(f"✅ DEBUG: react_page generated, length = {len(react_page)}")
+    
             return HTMLResponse(content=react_page)
         except Exception as e:
-            print(f"❌ DEBUG: Error in generate_react_component: {e}")
+    
             import traceback
             traceback.print_exc()
             return HTMLResponse(content=f"<h1>Error: {str(e)}</h1>")

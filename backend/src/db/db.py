@@ -25,10 +25,9 @@ sync_engine = create_engine(
     pool_recycle=300,
 )
 
-# Async session factory
+# Async session factory - используем правильный async_sessionmaker
 AsyncSessionLocal = async_sessionmaker(
-    async_engine,
-    class_=AsyncSession,
+    bind=async_engine,
     expire_on_commit=False
 )
 

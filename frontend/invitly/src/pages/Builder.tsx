@@ -27,7 +27,15 @@ import {
   PartyPopper,
   Cake,
   GraduationCap,
-  Building2
+  Building2,
+  Music,
+  Image,
+  Camera,
+  Shirt,
+  MessageSquare,
+  List,
+  Upload,
+  Trash2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -38,12 +46,32 @@ import { toast } from 'sonner';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useTranslation } from 'react-i18next';
 import TwoGISMapPreview from '@/components/TwoGISMapPreview';
+import { DatePicker } from '@/components/ui/date-picker';
+import { TimePicker } from '@/components/ui/time-picker';
 
 type EventType = string;
 
 interface RSVPState {
   enabled: boolean;
   options: string[];
+}
+
+interface TimelineEvent {
+  id: string;
+  time: string;
+  title: string;
+  description: string;
+}
+
+interface DressCode {
+  type: 'formal' | 'casual' | 'business' | 'costume' | 'smart_casual' | 'elegant';
+  description: string;
+}
+
+interface GalleryImage {
+  id: string;
+  url: string;
+  alt: string;
 }
 
 interface FormState {
@@ -58,6 +86,13 @@ interface FormState {
   contactPhone: string;
   contactEmail: string;
   rsvp: RSVPState;
+  // Дополнительные опции
+  timeline: TimelineEvent[];
+  dressCode: DressCode | null;
+  gallery: GalleryImage[];
+  backgroundMusic: string;
+  wishes: string;
+  backgroundImage?: string;
 }
 
 
@@ -264,6 +299,61 @@ const generateHTML = (siteData: any) => {
                 </div>
             </div>
             ` : ''}
+            
+            ${siteData.content_details.timeline && siteData.content_details.timeline.length > 0 ? `
+            <div class="${cardClass}">
+                <h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Программа мероприятия</h3>
+                <div class="space-y-4">
+                    ${siteData.content_details.timeline.map((event: any) => `
+                    <div class="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
+                        <div class="w-16 h-16 gradient-bg rounded-full flex items-center justify-center flex-shrink-0">
+                            <span class="text-white font-bold text-sm">${event.time}</span>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900 mb-1">${event.title}</h4>
+                            <p class="text-gray-600">${event.description}</p>
+                        </div>
+                    </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${siteData.content_details.dress_code ? `
+            <div class="${cardClass}">
+                <h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Дресс-код</h3>
+                <div class="p-4 bg-indigo-50 rounded-lg">
+                    <h4 class="font-semibold text-indigo-900 mb-2">${siteData.content_details.dress_code.type === 'formal' ? 'Формальный' : 
+                        siteData.content_details.dress_code.type === 'casual' ? 'Кэжуал' :
+                        siteData.content_details.dress_code.type === 'business' ? 'Деловой' :
+                        siteData.content_details.dress_code.type === 'costume' ? 'Костюм' :
+                        siteData.content_details.dress_code.type === 'smart_casual' ? 'Смарт-кэжуал' :
+                        siteData.content_details.dress_code.type === 'elegant' ? 'Элегантный' : 'Специальный'}</h4>
+                    <p class="text-indigo-700">${siteData.content_details.dress_code.description}</p>
+                </div>
+            </div>
+            ` : ''}
+            
+            ${siteData.content_details.wishes ? `
+            <div class="${cardClass}">
+                <h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Пожелания гостям</h3>
+                <div class="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border-l-4 border-yellow-400">
+                    <p class="text-gray-800 text-lg leading-relaxed">${siteData.content_details.wishes}</p>
+                </div>
+            </div>
+            ` : ''}
+            
+            ${siteData.content_details.background_music ? `
+            <div class="${cardClass}">
+                <h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Музыкальное сопровождение</h3>
+                <div class="p-4 bg-purple-50 rounded-lg">
+                    <p class="text-purple-700 font-medium">${siteData.content_details.background_music === 'romantic' ? 'Романтичная музыка' :
+                        siteData.content_details.background_music === 'party' ? 'Веселая музыка для вечеринки' :
+                        siteData.content_details.background_music === 'elegant' ? 'Элегантная музыка' :
+                        siteData.content_details.background_music === 'fun' ? 'Көңілді музыка' : 'Специальная подборка'}</p>
+                </div>
+            </div>
+            ` : ''}
         </div>
     </section>
 </body>
@@ -281,13 +371,13 @@ const LOCAL_STORAGE_KEY = "invitly-builder-draft";
 
 const validateForm = (form: FormState, t: any) => {
   const errors: Record<string, string> = {};
-  if (!form.title?.trim()) errors.title = "Title is required.";
-  if (!form.date?.trim()) errors.date = "Date is required.";
+  if (!form.title?.trim()) errors.title = t('builder.validation.title_required');
+  if (!form.date?.trim()) errors.date = t('builder.validation.date_required');
   if (!form.city?.trim()) errors.city = t('builder.validation.city_required');
   if (!form.location?.trim()) errors.location = t('builder.validation.location_required');
   if (form.rsvp.enabled) {
     form.rsvp.options.forEach((opt, idx) => {
-      if (!opt?.trim()) errors[`rsvp_${idx}`] = "Option cannot be empty.";
+      if (!opt?.trim()) errors[`rsvp_${idx}`] = t('builder.validation.rsvp_option_required');
     });
   }
   return errors;
@@ -352,7 +442,13 @@ const Builder = () => {
     contactName: "",
     contactPhone: "",
     contactEmail: "",
-    rsvp: { enabled: false, options: [t('builder.form.rsvp_options.yes'), t('builder.form.rsvp_options.no')] }
+    rsvp: { enabled: false, options: [t('builder.form.rsvp_options.yes'), t('builder.form.rsvp_options.no')] },
+    // Дополнительные опции
+    timeline: [],
+    dressCode: null,
+    gallery: [],
+    backgroundMusic: "",
+    wishes: ""
   }), [t]);
   
   const colorSchemes = useMemo(() => [
@@ -499,13 +595,29 @@ const Builder = () => {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  
+  // Modal states
+  const [showBackgroundModal, setShowBackgroundModal] = useState(false);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [showDressCodeModal, setShowDressCodeModal] = useState(false);
+  const [showTimelineModal, setShowTimelineModal] = useState(false);
+  const [showMusicModal, setShowMusicModal] = useState(false);
+  const [showWishesModal, setShowWishesModal] = useState(false);
+  
+  // Loading states
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [loadingPhrase, setLoadingPhrase] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
   const navigate = useNavigate();
   const { user, isInitialized } = useAuth();
 
   // Redirect if not authenticated
   useEffect(() => {
-    if (isInitialized && !user) navigate('/login?from=builder');
+    console.log('Builder auth check:', { isInitialized, user: !!user, userEmail: user?.email });
+    if (isInitialized && !user) {
+      console.log('Redirecting to login from builder');
+      navigate('/login?from=builder');
+    }
   }, [user, isInitialized, navigate]);
 
   // Auto-save draft
@@ -563,12 +675,50 @@ const Builder = () => {
     }
   };
 
+  const loadingPhrases = [
+    t('builder.loading.creating_design'),
+    t('builder.loading.optimizing_layout'),
+    t('builder.loading.adding_animations'),
+    t('builder.loading.preparing_content'),
+    t('builder.loading.finalizing_design'),
+    t('builder.loading.almost_ready'),
+    t('builder.loading.creating_magic'),
+    t('builder.loading.assembling_pieces'),
+    t('builder.loading.adding_finishing_touches'),
+    t('builder.loading.preparing_for_launch'),
+    t('builder.loading.generating_unique_design'),
+    t('builder.loading.optimizing_performance'),
+    t('builder.loading.adding_interactive_elements'),
+    t('builder.loading.creating_responsive_layout'),
+    t('builder.loading.finalizing_details')
+  ];
+
+  const startLoadingAnimation = () => {
+    setIsGenerating(true);
+    setLoadingPhrase(loadingPhrases[0]);
+    
+    let currentPhraseIndex = 0;
+    
+    const interval = setInterval(() => {
+      if (currentPhraseIndex < loadingPhrases.length - 1) {
+        currentPhraseIndex++;
+        setLoadingPhrase(loadingPhrases[currentPhraseIndex]);
+      }
+    }, 1000); // Меняем фразу каждую секунду
+    
+    return interval;
+  };
+
   const handleNext = async () => {
     if (currentStep === 1) setTouched({ title: true, date: true, city: true, location: true });
     if (!canNext()) return;
-    if (currentStep < 2) setCurrentStep(currentStep + 1);
+    if (currentStep < 3) setCurrentStep(currentStep + 1);
     else {
       setIsLoading(true);
+      
+      // Запускаем анимацию загрузки
+      const loadingInterval = startLoadingAnimation();
+      
       try {
         const siteRequest = {
           event_type: eventTypesList.find(e => e.label === form.eventType)?.backendValue || 'other',
@@ -588,16 +738,28 @@ const Builder = () => {
             contact_email: form.contactEmail,
             rsvp_enabled: form.rsvp.enabled,
             rsvp_options: form.rsvp.options,
+            // Дополнительные опции
+            timeline: form.timeline,
+            dress_code: form.dressCode,
+            gallery: form.gallery,
+            background_music: form.backgroundMusic,
+            wishes: form.wishes,
           },
         };
+        
+        // Ждем 10 секунд для показа анимации загрузки
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        
         await apiClient.generateSiteWithStatus(siteRequest, (status: any) => {});
-        toast.success('🎉 Invitation created successfully!');
+        toast.success(`🎉 ${t('notifications.invitation_created')}`);
         clearDraft();
         setTimeout(() => navigate('/dashboard'), 1200);
       } catch (e) {
-        toast.error('Error creating invitation. Please try again.');
+        toast.error(t('notifications.invitation_creation_error'));
       } finally {
         setIsLoading(false);
+        setIsGenerating(false);
+        clearInterval(loadingInterval);
       }
     }
   };
@@ -641,7 +803,7 @@ const Builder = () => {
   // Stepper-компонент
   const Stepper = ({ currentStep, onStepClick }: { currentStep: number; onStepClick: (step: number) => void }) => (
     <div className="flex justify-center items-center gap-0 mt-2 select-none">
-      {[0,1,2].map(idx => (
+      {[0,1,2,3].map(idx => (
         <div key={idx} className="flex items-center">
           <button
             type="button"
@@ -656,7 +818,7 @@ const Builder = () => {
           >
             {idx < currentStep ? <Check className="w-5 h-5" /> : idx+1}
           </button>
-          {idx < 2 && (
+          {idx < 3 && (
             <div className={`w-12 h-1 mx-1 rounded-full transition-all duration-200
               ${idx < currentStep
                 ? 'bg-gradient-to-r from-indigo-400 to-purple-400'
@@ -670,7 +832,7 @@ const Builder = () => {
 
   if (!isInitialized) return (
     <div className="flex min-h-screen items-center justify-center">
-      <LoadingSpinner size="lg" text="Загрузка..." />
+              <LoadingSpinner size="lg" text={t('common.loading')} />
     </div>
   );
 
@@ -757,14 +919,12 @@ const Builder = () => {
                             <Calendar className="w-4 h-4 text-indigo-500" />
                             {t('builder.form.event_date')} *
                           </label>
-                          <input
-                            className={`w-full p-4 border-2 rounded-xl bg-background/50 backdrop-blur-sm text-lg transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 ${
-                              errors.date && touched.date ? "border-destructive" : "border-border"
-                            }`}
-                            type="date"
+                          <DatePicker
                             value={form.date}
-                            onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                            onChange={(date) => setForm(f => ({ ...f, date }))}
                             onBlur={() => handleFieldBlur("date")}
+                            error={!!(errors.date && touched.date)}
+                            placeholder={t('builder.form.event_date_placeholder')}
                           />
                           {errors.date && touched.date && (
                             <p className="text-sm text-destructive">{errors.date}</p>
@@ -775,11 +935,10 @@ const Builder = () => {
                             <Clock className="w-4 h-4 text-indigo-500" />
                             {t('builder.form.event_time')}
                           </label>
-                          <input
-                            className="w-full p-4 border-2 rounded-xl bg-background/50 backdrop-blur-sm text-lg transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                            type="time"
+                          <TimePicker
                             value={form.time}
-                            onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
+                            onChange={(time) => setForm(f => ({ ...f, time }))}
+                            placeholder={t('builder.form.event_time_placeholder')}
                           />
                         </div>
                         <div className="space-y-2">
@@ -944,8 +1103,184 @@ const Builder = () => {
                 </motion.div>
               )}
 
-              {/* Step 3: Customize Style */}
+                            {/* Step 3: Additional Options */}
               {currentStep === 2 && (
+                <motion.div key="step2" initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 40 }} transition={{ duration: 0.3 }}>
+                  <Card className="p-6 lg:p-10 bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+                    <div className="text-center mb-8">
+                      <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                        {t('builder.form.additional_options.title')}
+                      </h2>
+                      <p className="text-gray-600">
+                        {t('builder.form.additional_options.subtitle')}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {/* Background/Photo Card */}
+                      <div 
+                        className={`p-6 border-2 rounded-xl transition-all cursor-pointer group ${
+                          form.backgroundImage ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'
+                        }`}
+                        onClick={() => setShowBackgroundModal(true)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg mb-1">{t('builder.form.additional_options.background.title')}</h3>
+                            <p className="text-sm text-gray-600">{t('builder.form.additional_options.background.subtitle')}</p>
+                            {form.backgroundImage && (
+                              <div className="mt-2 text-xs text-indigo-600">✓ {t('builder.form.additional_options.background.added')}</div>
+                            )}
+                          </div>
+                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Photo Gallery Card */}
+                      <div 
+                        className={`p-6 border-2 rounded-xl transition-all cursor-pointer group ${
+                          form.gallery && form.gallery.length > 0 ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'
+                        }`}
+                        onClick={() => setShowGalleryModal(true)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                            <Camera className="w-6 h-6 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg mb-1">{t('builder.form.additional_options.gallery.title')}</h3>
+                            <p className="text-sm text-gray-600">{t('builder.form.additional_options.gallery.subtitle')}</p>
+                            {form.gallery && form.gallery.length > 0 && (
+                              <div className="mt-2 text-xs text-indigo-600">{form.gallery.length} {t('builder.form.additional_options.gallery.photos_added')}</div>
+                            )}
+                          </div>
+                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Dress Code Card */}
+                      <div 
+                        className={`p-6 border-2 rounded-xl transition-all cursor-pointer group ${
+                          form.dressCode ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'
+                        }`}
+                        onClick={() => setShowDressCodeModal(true)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-red-500 rounded-xl flex items-center justify-center">
+                            <Shirt className="w-6 h-6 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg mb-1">{t('builder.form.additional_options.dress_code.title')}</h3>
+                            <p className="text-sm text-gray-600">{t('builder.form.additional_options.dress_code.subtitle')}</p>
+                            {form.dressCode && (
+                              <div className="mt-2 text-xs text-indigo-600">✓ {t(`builder.form.additional_options.dress_code.${form.dressCode.type}`)}</div>
+                            )}
+                          </div>
+                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Event Program Card */}
+                      <div 
+                        className={`p-6 border-2 rounded-xl transition-all cursor-pointer group ${
+                          form.timeline && form.timeline.length > 0 ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'
+                        }`}
+                        onClick={() => setShowTimelineModal(true)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-xl flex items-center justify-center">
+                            <List className="w-6 h-6 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg mb-1">{t('builder.form.additional_options.timeline.title')}</h3>
+                            <p className="text-sm text-gray-600">{t('builder.form.additional_options.timeline.subtitle')}</p>
+                            {form.timeline && form.timeline.length > 0 && (
+                              <div className="mt-2 text-xs text-indigo-600">{form.timeline.length} {t('builder.form.additional_options.timeline.events_added')}</div>
+                            )}
+                          </div>
+                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Background Music Card */}
+                      <div 
+                        className={`p-6 border-2 rounded-xl transition-all cursor-pointer group ${
+                          form.backgroundMusic ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'
+                        }`}
+                        onClick={() => setShowMusicModal(true)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                            <Music className="w-6 h-6 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg mb-1">{t('builder.form.additional_options.background_music.title')}</h3>
+                            <p className="text-sm text-gray-600">{t('builder.form.additional_options.background_music.subtitle')}</p>
+                            {form.backgroundMusic && (
+                              <div className="mt-2 text-xs text-indigo-600">✓ {t(`builder.form.additional_options.background_music.${form.backgroundMusic}`)}</div>
+                            )}
+                          </div>
+                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Wishes Card */}
+                      <div 
+                        className={`p-6 border-2 rounded-xl transition-all cursor-pointer group ${
+                          form.wishes ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'
+                        }`}
+                        onClick={() => setShowWishesModal(true)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-blue-500 rounded-xl flex items-center justify-center">
+                            <MessageSquare className="w-6 h-6 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg mb-1">{t('builder.form.additional_options.wishes.title')}</h3>
+                            <p className="text-sm text-gray-600">{t('builder.form.additional_options.wishes.subtitle')}</p>
+                            {form.wishes && (
+                              <div className="mt-2 text-xs text-indigo-600">✓ {t('builder.form.additional_options.wishes.added')}</div>
+                            )}
+                          </div>
+                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              )}
+
+              {/* Step 4: Customize Style */}
+              {currentStep === 3 && (
                 <motion.div key="step2" initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 40 }} transition={{ duration: 0.3 }}>
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                     {/* Style Customization */}
@@ -1047,6 +1382,12 @@ const Builder = () => {
                               contact_email: form.contactEmail,
                               rsvp_enabled: form.rsvp.enabled,
                               rsvp_options: form.rsvp.options,
+                              // Дополнительные опции
+                              timeline: form.timeline,
+                              dress_code: form.dressCode,
+                              gallery: form.gallery,
+                              background_music: form.backgroundMusic,
+                              wishes: form.wishes,
                             },
                           })}
                           className="w-full h-[500px] border-0"
@@ -1102,7 +1443,7 @@ const Builder = () => {
               disabled={!canNext() || isLoading}
               className="flex items-center gap-2 min-w-[140px]"
             >
-              {currentStep === 2 ? (
+              {currentStep === 3 ? (
                 <>
                   <Sparkles className="w-4 h-4" />
                   {t('builder.navigation.create_invitation')}
@@ -1116,10 +1457,391 @@ const Builder = () => {
             </Button>
           </div>
 
-          {isLoading && (
+          {isGenerating && (
+            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/90 backdrop-blur-md">
+              <div className="w-full max-w-md flex flex-col items-center justify-center gap-6">
+                <LoadingSpinner size="xl" text={loadingPhrase} />
+                <p className="text-center text-gray-500 text-sm max-w-md">
+                  {t('builder.loading.please_wait')}
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {isLoading && !isGenerating && (
             <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
               <div className="w-full max-w-md flex flex-col items-center justify-center gap-6">
                 <LoadingSpinner size="xl" text={t('builder.creating_invitation')} />
+              </div>
+            </div>
+          )}
+
+          {/* Background Image Modal */}
+          {showBackgroundModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Фон или фото для сайта</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setShowBackgroundModal(false)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-2">Перетащите файл сюда или нажмите для выбора</p>
+                    <Button variant="outline" className="mt-4">
+                      Выбрать файл
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setShowBackgroundModal(false)}>
+                      Отмена
+                    </Button>
+                    <Button className="flex-1" onClick={() => setShowBackgroundModal(false)}>
+                      Сохранить
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Gallery Modal */}
+          {showGalleryModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">{t('builder.form.additional_options.gallery.title')}</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setShowGalleryModal(false)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-2">{t('builder.form.additional_options.gallery.drag_drop')}</p>
+                    <p className="text-sm text-gray-500">{t('builder.form.additional_options.gallery.max_files')}</p>
+                    <Button variant="outline" className="mt-4">
+                      {t('builder.form.additional_options.gallery.upload')}
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setShowGalleryModal(false)}>
+                      Отмена
+                    </Button>
+                    <Button className="flex-1" onClick={() => setShowGalleryModal(false)}>
+                      Сохранить
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Dress Code Modal */}
+          {showDressCodeModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold">{t('builder.form.additional_options.dress_code.title')}</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setShowDressCodeModal(false)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-6">
+                  <p className="text-sm text-gray-600">{t('builder.form.additional_options.dress_code.subtitle')}</p>
+                  
+                  {/* Готовые варианты */}
+                  <div>
+                    <h4 className="font-medium mb-3">Готовые варианты</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { type: 'formal', label: t('builder.form.additional_options.dress_code.formal'), desc: t('builder.form.additional_options.dress_code.formal_desc') },
+                        { type: 'casual', label: t('builder.form.additional_options.dress_code.casual'), desc: t('builder.form.additional_options.dress_code.casual_desc') },
+                        { type: 'business', label: t('builder.form.additional_options.dress_code.business'), desc: t('builder.form.additional_options.dress_code.business_desc') },
+                        { type: 'costume', label: t('builder.form.additional_options.dress_code.costume'), desc: t('builder.form.additional_options.dress_code.costume_desc') },
+                        { type: 'smart_casual', label: t('builder.form.additional_options.dress_code.smart_casual'), desc: t('builder.form.additional_options.dress_code.smart_casual_desc') },
+                        { type: 'elegant', label: t('builder.form.additional_options.dress_code.elegant'), desc: t('builder.form.additional_options.dress_code.elegant_desc') }
+                      ].map((dressCode) => (
+                        <button
+                          key={dressCode.type}
+                          onClick={() => {
+                            setForm(f => ({ ...f, dressCode: { type: dressCode.type as any, description: dressCode.desc } }));
+                            setShowDressCodeModal(false);
+                          }}
+                          className={`p-4 text-left rounded-lg border-2 transition-all ${
+                            form.dressCode?.type === dressCode.type
+                              ? 'border-indigo-500 bg-indigo-50'
+                              : 'border-gray-200 hover:border-indigo-300'
+                          }`}
+                        >
+                          <div className="font-medium">{dressCode.label}</div>
+                          <div className="text-sm text-gray-600">{dressCode.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Свой дресс-код */}
+                  <div>
+                    <h4 className="font-medium mb-3 flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-indigo-500" />
+                      Добавить свой дресс-код
+                    </h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Название дресс-кода</label>
+                        <input
+                          type="text"
+                          placeholder="Например: 'Пижамная вечеринка' или 'Костюм супергероя'"
+                          className="w-full p-3 border rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Описание</label>
+                        <textarea
+                          placeholder="Опишите желаемый стиль одежды для гостей..."
+                          className="w-full p-3 border rounded-lg min-h-[100px] resize-none"
+                        />
+                      </div>
+                      <Button className="w-full">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Добавить дресс-код
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Timeline Modal */}
+          {showTimelineModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="bg-white rounded-xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold">{t('builder.form.additional_options.timeline.title')}</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setShowTimelineModal(false)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-6">
+                  <p className="text-sm text-gray-600">{t('builder.form.additional_options.timeline.subtitle')}</p>
+                  
+                  <div className="space-y-6">
+                    {form.timeline.map((event, index) => (
+                      <div key={event.id} className="p-6 bg-gray-50 rounded-lg border">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-medium text-lg">Событие {index + 1}</h4>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const newTimeline = form.timeline.filter((_, i) => i !== index);
+                              setForm(f => ({ ...f, timeline: newTimeline }));
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Время</label>
+                            <input
+                              type="time"
+                              value={event.time}
+                              onChange={(e) => {
+                                const newTimeline = [...form.timeline];
+                                newTimeline[index].time = e.target.value;
+                                setForm(f => ({ ...f, timeline: newTimeline }));
+                              }}
+                              className="w-full p-3 border rounded-lg"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Название события</label>
+                            <input
+                              type="text"
+                              placeholder={t('builder.form.additional_options.timeline.event_title')}
+                              value={event.title}
+                              onChange={(e) => {
+                                const newTimeline = [...form.timeline];
+                                newTimeline[index].title = e.target.value;
+                                setForm(f => ({ ...f, timeline: newTimeline }));
+                              }}
+                              className="w-full p-3 border rounded-lg"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Описание</label>
+                            <textarea
+                              placeholder={t('builder.form.additional_options.timeline.description')}
+                              value={event.description}
+                              onChange={(e) => {
+                                const newTimeline = [...form.timeline];
+                                newTimeline[index].description = e.target.value;
+                                setForm(f => ({ ...f, timeline: newTimeline }));
+                              }}
+                              className="w-full p-3 border rounded-lg min-h-[120px] resize-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const newEvent: TimelineEvent = {
+                          id: Date.now().toString(),
+                          time: '',
+                          title: '',
+                          description: ''
+                        };
+                        setForm(f => ({ ...f, timeline: [...f.timeline, newEvent] }));
+                      }}
+                      className="w-full py-4"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      {t('builder.form.additional_options.timeline.add_event')}
+                    </Button>
+                  </div>
+
+                  <div className="flex gap-2 pt-4 border-t">
+                    <Button variant="outline" className="flex-1" onClick={() => setShowTimelineModal(false)}>
+                      Отмена
+                    </Button>
+                    <Button className="flex-1" onClick={() => setShowTimelineModal(false)}>
+                      Сохранить
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Music Modal */}
+          {showMusicModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold">{t('builder.form.additional_options.background_music.title')}</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setShowMusicModal(false)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-6">
+                  <p className="text-sm text-gray-600">{t('builder.form.additional_options.background_music.subtitle')}</p>
+                  
+                  {/* Готовые варианты */}
+                  <div>
+                    <h4 className="font-medium mb-3">Готовые варианты</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {[
+                        { value: '', label: t('builder.form.additional_options.background_music.none') },
+                        { value: 'romantic', label: t('builder.form.additional_options.background_music.romantic') },
+                        { value: 'party', label: t('builder.form.additional_options.background_music.party') },
+                        { value: 'elegant', label: t('builder.form.additional_options.background_music.elegant') },
+                        { value: 'fun', label: t('builder.form.additional_options.background_music.fun') }
+                      ].map((music) => (
+                        <button
+                          key={music.value}
+                          onClick={() => {
+                            setForm(f => ({ ...f, backgroundMusic: music.value }));
+                            setShowMusicModal(false);
+                          }}
+                          className={`p-4 text-center rounded-lg border-2 transition-all ${
+                            form.backgroundMusic === music.value
+                              ? 'border-indigo-500 bg-indigo-50'
+                              : 'border-gray-200 hover:border-indigo-300'
+                          }`}
+                        >
+                          {music.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Генерация с помощью ИИ */}
+                  <div>
+                    <h4 className="font-medium mb-3 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-indigo-500" />
+                      Генерация с помощью ИИ
+                    </h4>
+                    <div className="space-y-3">
+                      <textarea
+                        placeholder="Опишите желаемую музыку: например, 'романтичная мелодия для свадьбы' или 'веселая музыка для дня рождения'"
+                        className="w-full p-3 border rounded-lg min-h-[80px] resize-none"
+                      />
+                      <Button className="w-full" disabled>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Сгенерировать музыку
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Загрузка своей музыки */}
+                  <div>
+                    <h4 className="font-medium mb-3 flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-indigo-500" />
+                      Загрузить свою музыку
+                    </h4>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <Music className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 mb-2">Перетащите аудиофайл сюда или нажмите для выбора</p>
+                      <p className="text-sm text-gray-500 mb-4">Поддерживаемые форматы: MP3, WAV, M4A (до 10MB)</p>
+                      <Button variant="outline">
+                        Выбрать файл
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Wishes Modal */}
+          {showWishesModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">{t('builder.form.additional_options.wishes.title')}</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setShowWishesModal(false)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">{t('builder.form.additional_options.wishes.subtitle')}</p>
+                  <textarea
+                    value={form.wishes}
+                    onChange={(e) => setForm(f => ({ ...f, wishes: e.target.value }))}
+                    placeholder={t('builder.form.additional_options.wishes.placeholder')}
+                    className="w-full p-4 border-2 rounded-xl bg-background/50 backdrop-blur-sm min-h-[120px] text-lg transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
+                  />
+                  <p className="text-sm text-gray-500">{t('builder.form.additional_options.wishes.examples')}</p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setShowWishesModal(false)}>
+                      Отмена
+                    </Button>
+                    <Button className="flex-1" onClick={() => setShowWishesModal(false)}>
+                      Сохранить
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

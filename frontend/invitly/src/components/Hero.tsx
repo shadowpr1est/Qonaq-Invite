@@ -32,11 +32,7 @@ const Container = ({ children, className = '' }) => (
   </div>
 );
 
-// Mock auth hook
-const useAuth = () => ({
-  user: null, // Change to { name: 'Иван Иванов' } to see logged in state
-  isInitialized: true
-});
+import { useAuth } from '@/hooks/use-auth';
 
 export default function Hero() {
   const [currentTemplate, setCurrentTemplate] = useState(0);
@@ -79,9 +75,17 @@ export default function Hero() {
   }, [localizedTemplates.length]);
 
   const handlePrimaryAction = () => {
+    console.log('Hero primary action:', { 
+      user: !!user, 
+      userEmail: user?.email,
+      hasLocalToken: typeof window !== 'undefined' && !!localStorage.getItem('access_token'),
+      localTokenLength: typeof window !== 'undefined' ? localStorage.getItem('access_token')?.length || 0 : 0
+    });
     if (user) {
+      console.log('Navigating to builder as authenticated user');
       navigate('/builder');
     } else {
+      console.log('Navigating to signup as unauthenticated user');
       navigate('/signup');
     }
   };

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -13,19 +14,23 @@ const sizePx = {
   xl: 72,
 };
 
-export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 'md', className = '', text }) => (
-  <div className={`flex flex-col items-center justify-center space-y-4 ${className}`}>
-    <div
-      className="invitly-loader"
-      style={{ width: sizePx[size], height: sizePx[size] }}
-      role="status"
-      aria-label="Загрузка"
-    />
-    {text && (
-      <p className="text-sm text-gray-600 font-medium animate-pulse">{text}</p>
-    )}
-  </div>
-);
+export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 'md', className = '', text }) => {
+  const { t } = useTranslation();
+  
+  return (
+    <div className={`flex flex-col items-center justify-center space-y-4 ${className}`}>
+      <div
+        className="invitly-loader"
+        style={{ width: sizePx[size], height: sizePx[size] }}
+        role="status"
+        aria-label={t('common.loading')}
+      />
+      {text && (
+        <p className="text-sm text-gray-600 font-medium animate-pulse">{text}</p>
+      )}
+    </div>
+  );
+};
 
 // Добавляем стиль только один раз
 if (typeof window !== 'undefined' && !document.getElementById('invitly-loader-style')) {

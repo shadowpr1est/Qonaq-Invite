@@ -111,12 +111,17 @@
       "event_title": "Event Title",
       "event_date": "Event Date",
       "event_time": "Time",
+      "city": "City",
       "location": "Location",
       "description": "Description",
       "contact_information": "Contact Information",
       "contact_name": "Name",
       "contact_phone": "Phone",
+      "contact_email": "Email",
       "event_title_placeholder": "Name your event...",
+      "event_date_placeholder": "Select event date",
+      "event_time_placeholder": "Select event time",
+      "city_placeholder": "Enter city...",
       "location_placeholder": "Where will the event take place?",
       "description_placeholder": "Tell guests what to expect...",
       "contact_name_placeholder": "Contact person",
@@ -131,6 +136,66 @@
       "rsvp_options": {
         "yes": "Yes, I'm coming",
         "no": "No, I can't come"
+      },
+      "additional_options": {
+        "title": "Additional Options",
+        "subtitle": "Make your invitation even more special",
+        "timeline": {
+          "title": "Event Program",
+          "subtitle": "Create a schedule of events",
+          "add_event": "Add Event",
+          "time": "Time",
+          "event_title": "Event Title",
+          "description": "Description",
+          "remove": "Remove",
+          "events_added": "events added"
+        },
+        "dress_code": {
+          "title": "Dress Code",
+          "subtitle": "Specify preferred clothing style",
+          "formal": "Formal",
+          "casual": "Casual",
+          "business": "Business",
+          "costume": "Costume",
+          "smart_casual": "Smart Casual",
+          "elegant": "Elegant",
+          "formal_desc": "Suit, dress",
+          "casual_desc": "Casual clothing",
+          "business_desc": "Business suit",
+          "costume_desc": "Thematic costumes",
+          "smart_casual_desc": "Smart casual clothing",
+          "elegant_desc": "Elegant outfits"
+        },
+        "gallery": {
+          "title": "Gallery",
+          "subtitle": "Add photos for your invitation",
+          "upload": "Upload Photo",
+          "drag_drop": "Drag files here or click to select",
+          "max_files": "Maximum 10 files",
+          "remove": "Remove",
+          "photos_added": "photos added"
+        },
+        "background_music": {
+          "title": "Background Music",
+          "subtitle": "Choose music for your invitation",
+          "none": "No music",
+          "romantic": "Romantic",
+          "party": "Party",
+          "elegant": "Elegant",
+          "fun": "Fun"
+        },
+        "wishes": {
+          "title": "Wishes for Guests",
+          "subtitle": "Add a personal message",
+          "placeholder": "Write your wishes for guests...",
+          "examples": "Examples: \"Come with good mood\", \"Don't forget your camera\"",
+          "added": "Wishes added"
+        },
+        "background": {
+          "title": "Background or Photo for Site",
+          "subtitle": "Add a background or photo to your site",
+          "added": "Background added"
+        }
       }
     },
     "preview": {
@@ -150,6 +215,36 @@
       "back": "Back",
       "next": "Next",
       "create_invitation": "Create invitation"
+    },
+    "loading": {
+      "creating_design": "Creating design...",
+      "optimizing_layout": "Optimizing layout...",
+      "adding_animations": "Adding animations...",
+      "preparing_content": "Preparing content...",
+      "finalizing_design": "Finalizing design...",
+      "almost_ready": "Almost ready...",
+      "creating_magic": "Creating magic...",
+      "assembling_pieces": "Assembling pieces...",
+      "adding_finishing_touches": "Adding finishing touches...",
+      "preparing_for_launch": "Preparing for launch...",
+      "generating_unique_design": "Generating unique design...",
+      "optimizing_performance": "Optimizing performance...",
+      "adding_interactive_elements": "Adding interactive elements...",
+      "creating_responsive_layout": "Creating responsive layout...",
+      "finalizing_details": "Finalizing details...",
+      "please_wait": "Please wait. We're creating a unique invitation for you!"
+    },
+    "validation": {
+      "title_required": "Event title is required",
+      "date_required": "Event date is required",
+      "city_required": "City is required",
+      "location_required": "Location is required",
+      "contact_name_required": "Contact name is required",
+      "contact_phone_required": "Phone is required",
+      "contact_email_required": "Email is required",
+      "rsvp_option_required": "RSVP option is required",
+      "invalid_email": "Invalid email format",
+      "invalid_phone": "Invalid phone format"
     }
   },
   
@@ -353,6 +448,11 @@
   
   "common": {
     "loading": "Loading...",
+    "saving": "Saving...",
+    "changing": "Changing...",
+    "loading_stats": "Loading statistics...",
+    "loading_analytics": "Loading analytics...",
+    "loading_map": "Loading map...",
     "error": "An error occurred",
     "success": "Success",
     "save": "Save",
@@ -388,6 +488,46 @@
     "password_match": "Passwords do not match",
     "invalid_format": "Invalid format"
   },
+
+  "calendar": {
+    "select_date": "Select date",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+  },
+
+  "time": {
+    "select_time": "Select time",
+    "quick_select": "Quick select",
+    "custom_time": "Custom time",
+    "morning": "Morning",
+    "noon": "Noon",
+    "afternoon": "Afternoon",
+    "evening": "Evening",
+    "night": "Night",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "am": "AM",
+    "pm": "PM"
+  },
   
   "notifications": {
     "invitation_created": "Invitation created successfully",
@@ -396,7 +536,8 @@
     "profile_updated": "Profile updated",
     "password_changed": "Password changed",
     "email_sent": "Email sent",
-    "changes_saved": "Changes saved"
+    "changes_saved": "Changes saved",
+    "invitation_creation_error": "Error creating invitation. Please try again."
   },
   
   "how_it_works": {

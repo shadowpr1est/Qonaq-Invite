@@ -75,7 +75,7 @@ const TwoGISMapPreview: React.FC<TwoGISMapPreviewProps> = ({
       >
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto mb-2"></div>
-          <p className="text-sm text-gray-600">Загрузка карты...</p>
+                        <p className="text-sm text-gray-600">{t('common.loading_map')}</p>
         </div>
       </div>
     );

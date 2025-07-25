@@ -108,12 +108,17 @@
       "event_title": "Іс-шара атауы",
       "event_date": "Іс-шара күні",
       "event_time": "Уақыт",
+      "city": "Қала",
       "location": "Орын",
       "description": "Сипаттама",
       "contact_information": "Байланыс ақпараты",
       "contact_name": "Аты",
       "contact_phone": "Телефон",
+      "contact_email": "Email",
       "event_title_placeholder": "Іс-шараңызды атаңыз...",
+      "event_date_placeholder": "Іс-шара күнін таңдаңыз",
+      "event_time_placeholder": "Іс-шара уақытын таңдаңыз",
+      "city_placeholder": "Қаланы енгізіңіз...",
       "location_placeholder": "Іс-шара қайда өтеді?",
       "description_placeholder": "Қонақтарға не күтетіндігін айтыңыз...",
       "contact_name_placeholder": "Байланыс тұлғасы",
@@ -128,6 +133,66 @@
       "rsvp_options": {
         "yes": "Иә, келемін",
         "no": "Жоқ, келе алмаймын"
+      },
+      "additional_options": {
+        "title": "Қосымша опциялар",
+        "subtitle": "Шақыруыңызды одан да ерекше етіңіз",
+        "timeline": {
+          "title": "Іс-шара бағдарламасы",
+          "subtitle": "Оқиғалар кестесін жасаңыз",
+          "add_event": "Оқиға қосу",
+          "time": "Уақыт",
+          "event_title": "Оқиға атауы",
+          "description": "Сипаттама",
+          "remove": "Жою",
+          "events_added": "оқиға қосылды"
+        },
+        "dress_code": {
+          "title": "Дресс-код",
+          "subtitle": "Қалаған киім стилін көрсетіңіз",
+          "formal": "Ресми",
+          "casual": "Күнделікті",
+          "business": "Бизнес",
+          "costume": "Костюм",
+          "smart_casual": "Ақылды күнделікті",
+          "elegant": "Сәнді",
+          "formal_desc": "Костюм, көйлек",
+          "casual_desc": "Күнделікті киім",
+          "business_desc": "Бизнес костюмі",
+          "costume_desc": "Тақырыптық костюмдер",
+          "smart_casual_desc": "Ақылды күнделікті киім",
+          "elegant_desc": "Сәнді киімдер"
+        },
+        "gallery": {
+          "title": "Галерея",
+          "subtitle": "Шақыруға фотосуреттер қосыңыз",
+          "upload": "Фото жүктеу",
+          "drag_drop": "Файлдарды осында тартыңыз немесе таңдау үшін басыңыз",
+          "max_files": "Максимум 10 файл",
+          "remove": "Жою",
+          "photos_added": "фото қосылды"
+        },
+        "background_music": {
+          "title": "Фон музыкасы",
+          "subtitle": "Шақыруға музыка таңдаңыз",
+          "none": "Музыкасыз",
+          "romantic": "Романтикалық",
+          "party": "Той",
+          "elegant": "Сәнді",
+          "fun": "Көңілді"
+        },
+        "wishes": {
+          "title": "Қонақтарға тілектер",
+          "subtitle": "Жеке хабарлама қосыңыз",
+          "placeholder": "Қонақтарға тілектеріңізді жазыңыз...",
+          "examples": "Мысалдар: «Жақсы көңіл-күймен келіңіз», «Фотоаппаратты ұмытпаңыз»",
+          "added": "Тілектер қосылды"
+        },
+        "background": {
+          "title": "Сайт үшін фон немесе фото",
+          "subtitle": "Сайтыңызға фон немесе фото қосыңыз",
+          "added": "Фон қосылды"
+        }
       }
     },
     "preview": {
@@ -147,6 +212,36 @@
       "back": "Артқа",
       "next": "Келесі",
       "create_invitation": "Шақыру жасау"
+    },
+    "loading": {
+      "creating_design": "Дизайн жасалуда...",
+      "optimizing_layout": "Макет оңтайландырылуда...",
+      "adding_animations": "Анимациялар қосылуда...",
+      "preparing_content": "Мазмұн дайындалуда...",
+      "finalizing_design": "Дизайн аяқталуда...",
+      "almost_ready": "Дайын болады...",
+      "creating_magic": "Сиқыр жасалуда...",
+      "assembling_pieces": "Бөліктер жиналуда...",
+      "adding_finishing_touches": "Соңғы түзетулер қосылуда...",
+      "preparing_for_launch": "Іске қосуға дайындалуда...",
+      "generating_unique_design": "Бірегей дизайн жасалуда...",
+      "optimizing_performance": "Өнімділік оңтайландырылуда...",
+      "adding_interactive_elements": "Интерактивті элементтер қосылуда...",
+      "creating_responsive_layout": "Адаптивті макет жасалуда...",
+      "finalizing_details": "Толықтырулар аяқталуда...",
+      "please_wait": "Күте тұрыңыз. Біз сіз үшін бірегей шақыру жасап жатырмыз!"
+    },
+    "validation": {
+      "title_required": "Іс-шара атауы міндетті",
+      "date_required": "Іс-шара күні міндетті",
+      "city_required": "Қала міндетті",
+      "location_required": "Орын міндетті",
+      "contact_name_required": "Байланыс тұлғасының аты міндетті",
+      "contact_phone_required": "Телефон міндетті",
+      "contact_email_required": "Email міндетті",
+      "rsvp_option_required": "RSVP опциясы міндетті",
+      "invalid_email": "Email пішімі дұрыс емес",
+      "invalid_phone": "Телефон пішімі дұрыс емес"
     }
   },
   
@@ -343,6 +438,11 @@
   },
   "common": {
     "loading": "Жүктелуде...",
+    "saving": "Сақталуда...",
+    "changing": "Өзгеруде...",
+    "loading_stats": "Статистика жүктелуде...",
+    "loading_analytics": "Аналитика жүктелуде...",
+    "loading_map": "Карта жүктелуде...",
     "error": "Қате орын алды",
     "success": "Сәтті",
     "save": "Сақтау",
@@ -377,6 +477,46 @@
     "password_match": "Құпия сөздер сәйкес келмейді",
     "invalid_format": "Дұрыс емес формат"
   },
+
+  "calendar": {
+    "select_date": "Күнді таңдаңыз",
+    "today": "Бүгін",
+    "tomorrow": "Ертең",
+    "january": "Қаңтар",
+    "february": "Ақпан",
+    "march": "Наурыз",
+    "april": "Сәуір",
+    "may": "Мамыр",
+    "june": "Маусым",
+    "july": "Шілде",
+    "august": "Тамыз",
+    "september": "Қыркүйек",
+    "october": "Қазан",
+    "november": "Қараша",
+    "december": "Желтоқсан",
+    "mon": "Дс",
+    "tue": "Сс",
+    "wed": "Ср",
+    "thu": "Бс",
+    "fri": "Жм",
+    "sat": "Сн",
+    "sun": "Жк"
+  },
+
+  "time": {
+    "select_time": "Уақытты таңдаңыз",
+    "quick_select": "Жылдам таңдау",
+    "custom_time": "Өз уақытыңыз",
+    "morning": "Таң",
+    "noon": "Түс",
+    "afternoon": "Күндіз",
+    "evening": "Кеш",
+    "night": "Түн",
+    "hours": "Сағат",
+    "minutes": "Минут",
+    "am": "түске дейін",
+    "pm": "түстен кейін"
+  },
   "notifications": {
     "invitation_created": "Шақыру сәтті жасалды",
     "invitation_updated": "Шақыру жаңартылды",
@@ -384,7 +524,8 @@
     "profile_updated": "Профиль жаңартылды",
     "password_changed": "Құпия сөз өзгертілді",
     "email_sent": "Email жіберілді",
-    "changes_saved": "Өзгерістер сақталды"
+    "changes_saved": "Өзгерістер сақталды",
+    "invitation_creation_error": "Шақыру жасау кезінде қате. Қайталап көріңіз."
   },
   "how_it_works": {
     "title": "Қалай жұмыс істейді",

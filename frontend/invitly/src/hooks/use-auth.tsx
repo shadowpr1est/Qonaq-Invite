@@ -50,7 +50,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       console.log('Initializing auth...');
       try {
-        if (apiClient.isAuthenticated()) {
+        const isAuth = apiClient.isAuthenticated();
+        console.log('isAuthenticated check result:', isAuth);
+        
+        if (isAuth) {
           console.log('User is authenticated, fetching user data...');
           const userData = await apiClient.getCurrentUser();
           console.log('User data fetched:', userData);
@@ -60,6 +63,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error('Failed to initialize auth:', error);
+        console.error('Error details:', {
+          message: error.message,
+          status: error.status,
+          response: error.response
+        });
         // Не выкидываем пользователя при ошибке инициализации
         // Просто очищаем токены и продолжаем
         apiClient.removeToken();

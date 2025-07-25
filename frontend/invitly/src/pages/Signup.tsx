@@ -248,7 +248,7 @@ export default function Signup() {
                 className="w-full py-3 rounded-lg font-semibold text-lg bg-indigo-600 hover:bg-indigo-700 text-white transition disabled:opacity-60"
                 disabled={isVerifying || verificationCode.length !== 6}
               >
-                {isVerifying ? <LoadingSpinner className="mx-auto" /> : 'Подтвердить'}
+                {isVerifying ? <LoadingSpinner className="mx-auto" /> : t('common.confirm')}
               </button>
             </form>
             

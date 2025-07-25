@@ -147,9 +147,6 @@ class SiteGeneratorService:
         self.model = "gpt-4o"
         # Загружаем API ключ из settings, если не найден - из os.environ
         self.two_gis_api_key = getattr(settings, 'TWO_GIS_API_KEY', '') or os.getenv('VITE_2GIS_API_KEY', '')
-        print(f"[INIT] TWO_GIS_API_KEY из settings: {getattr(settings, 'TWO_GIS_API_KEY', '')[:10] if getattr(settings, 'TWO_GIS_API_KEY', '') else 'НЕ НАЙДЕН'}...")
-        print(f"[INIT] TWO_GIS_API_KEY из os.environ: {os.getenv('VITE_2GIS_API_KEY', '')[:10] if os.getenv('VITE_2GIS_API_KEY', '') else 'НЕ НАЙДЕН'}...")
-        print(f"[INIT] Итоговый API ключ: {self.two_gis_api_key[:10] if self.two_gis_api_key else 'НЕ НАЙДЕН'}...")
     
     def _get_color_scheme(self, color_preference: str) -> Dict[str, str]:
         """Получает цветовую схему по предпочтению пользователя"""
@@ -164,15 +161,10 @@ class SiteGeneratorService:
         Геокодирует адрес через 2GIS API
         Возвращает координаты и информацию о месте
         """
-        print(f"[GEOCODE] Начинаем геокодирование адреса: '{address}'")
-        print(f"[GEOCODE] API ключ: {self.two_gis_api_key[:10] if self.two_gis_api_key else 'НЕ НАЙДЕН'}...")
-        
         if not self.two_gis_api_key:
-            print("[GEOCODE] ❌ API ключ не найден")
             return None
         
         if not address.strip():
-            print("[GEOCODE] ❌ Адрес пустой")
             return None
         
         try:
@@ -183,52 +175,33 @@ class SiteGeneratorService:
                 'key': self.two_gis_api_key
             }
             
-            print(f"[GEOCODE] Отправляем запрос к 2GIS API...")
-            print(f"[GEOCODE] URL: {url}")
-            print(f"[GEOCODE] Параметры: {params}")
-            
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params) as response:
-                    print(f"[GEOCODE] Статус ответа: {response.status}")
-                    
                     if response.status == 200:
                         data = await response.json()
-                        print(f"[GEOCODE] Ответ получен: {data}")
                         
                         if data.get('result', {}).get('items'):
                             result = data['result']['items'][0]
-                            print(f"[GEOCODE] ✅ Найден результат: {result}")
                             return result
                         else:
-                            print(f"[GEOCODE] ❌ Результаты не найдены в ответе")
                             return None
                     else:
-                        error_text = await response.text()
-                        print(f"[GEOCODE] ❌ Ошибка API: {response.status}")
-                        print(f"[GEOCODE] Ответ: {error_text}")
                         return None
         except Exception as e:
-            print(f"[GEOCODE] ❌ Ошибка геокодирования адреса '{address}': {e}")
             return None
     
     def _generate_map_html(self, location_data: Dict[str, Any], colors: Dict[str, str], theme_styles: Dict[str, str]) -> str:
         """
         Генерирует HTML для встраивания 2GIS карты используя новый MapGL JS API
         """
-        print(f"[DEBUG] _generate_map_html вызван с location_data: {location_data}")
-        
         if not location_data:
-            print("[DEBUG] location_data пустой, возвращаем пустую строку")
             return ""
         
         coordinates = location_data.get('point', {})
         lat = coordinates.get('lat')
         lon = coordinates.get('lon')
         
-        print(f"[DEBUG] Координаты: lat={lat}, lon={lon}")
-        
         if not lat or not lon:
-            print("[DEBUG] Координаты отсутствуют, возвращаем пустую строку")
             return ""
         
         location_name = location_data.get('name', 'Место проведения')
@@ -242,7 +215,7 @@ class SiteGeneratorService:
         
         # Создаем HTML с новым MapGL JS API
         map_html = f"""
-        <div class="w-full h-64 rounded-lg overflow-hidden shadow-lg border border-gray-200">
+        <div class="w-full h-80 rounded-lg overflow-hidden shadow-lg border border-gray-200 max-w-2xl mx-auto">
             <div id="{map_id}" class="w-full h-full"></div>
         </div>
         
@@ -250,36 +223,25 @@ class SiteGeneratorService:
         <script>
             function initMap{map_id}() {{
                 try {{
-                    console.log('🗺️ Инициализация карты 2ГИС для {location_name}...');
-                    
                     const map = new mapgl.Map('{map_id}', {{
                         key: '{api_key}',
                         center: [{lon}, {lat}],
                         zoom: 16
                     }});
                     
-                    console.log('📍 Добавляем маркер...');
-                    // Добавляем маркер
                     const marker = new mapgl.Marker(map, {{
                         coordinates: [{lon}, {lat}]
                     }});
                     
-                    console.log('✅ Карта успешно инициализирована!');
-                    
-                    // Добавляем обработчик ошибок
                     map.on('error', function(e) {{
-                        console.error('❌ Ошибка карты 2ГИС:', e);
                         showFallback{map_id}();
                     }});
-                    
                 }} catch (error) {{
-                    console.error('❌ Ошибка инициализации карты:', error);
                     showFallback{map_id}();
                 }}
             }}
             
             function showFallback{map_id}() {{
-                console.log('🔄 Показываем fallback для {location_name}...');
                 document.getElementById('{map_id}').innerHTML = 
                     '<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50">' +
                     '<div class="text-center p-4">' +
@@ -291,7 +253,6 @@ class SiteGeneratorService:
             }}
         </script>
         """
-        
         return map_html
     
     def _generate_calendar_html(self, event_date: datetime, colors: Dict[str, str]) -> str:
@@ -308,7 +269,7 @@ class SiteGeneratorService:
         starting_day_of_week = (first_day.weekday() + 1) % 7
         
         calendar_html = f"""
-        <div class="text-center mb-6">
+        <div class="text-center mb-6 max-w-sm mx-auto">
             <h4 class="text-xl font-bold {colors['accent']} mb-4">{event_month} {event_year}</h4>
             <div class="grid grid-cols-7 gap-1 mb-2 text-xs font-medium text-gray-500">
                 <div class="py-2">Вс</div><div class="py-2">Пн</div><div class="py-2">Вт</div>
@@ -343,24 +304,21 @@ class SiteGeneratorService:
         if 'rsvp_options' in data and not data.get('rsvp_enabled'):
             data['rsvp_enabled'] = True
         # Подробный лог для отладки
-        if any('rsvp' in k for k in data.keys()):
-            print(f"[RSVP-DEBUG] content_details: {data}")
-        print(f"[RSVP] site_id={site_id} rsvp_enabled={data.get('rsvp_enabled')} rsvp_options={data.get('rsvp_options')}")
         if not data.get('rsvp_enabled'):
-            print(f"[RSVP] rsvp_enabled is False, returning empty string. content_details: {data}")
+            return ""
             return ""
         rsvp_options = data.get('rsvp_options', ['Буду', 'Не смогу'])
         # Корректный site_id для endpoint
         site_id_attr = f'data-site-id="{site_id}"' if site_id else ''
         # Кнопки RSVP
-        buttons_html = "<div id=\"rsvp-options\" class=\"grid gap-4 max-w-md mx-auto\">"
+        buttons_html = "<div id=\"rsvp-options\" class=\"grid gap-4 max-w-sm mx-auto\">"
         for i, option in enumerate(rsvp_options):
             button_class = f"bg-gradient-to-r {colors['primary']} text-white hover:shadow-lg" if i == 0 else f"bg-white border-2 border-gray-200 {colors['accent']} hover:bg-gray-50"
             buttons_html += f'<button type="button" class="{theme_styles["button"]} {button_class} w-full" data-rsvp-option="{option}">{option}</button>'
         buttons_html += "</div>"
         # Форма RSVP (скрыта по умолчанию)
         form_html = (
-            f'<form id="rsvp-form" class="space-y-4 max-w-md mx-auto mt-6 hidden">'
+            f'<form id="rsvp-form" class="space-y-4 max-w-sm mx-auto mt-6 hidden">'
             f'<input type="hidden" name="rsvp_option" id="rsvp_option_input" />'
             f'<div>'
             f'<label for="rsvp_name" class="block text-sm font-medium mb-1">Ваше имя <span class="text-red-500">*</span></label>'
@@ -376,7 +334,7 @@ class SiteGeneratorService:
             f'<div id="rsvp-error" class="hidden text-center text-red-600 font-semibold mt-4">Ошибка при отправке RSVP. Попробуйте еще раз.</div>'
         )
         rsvp_html = (
-            f'<div id="rsvp-root" {site_id_attr} class="{theme_styles["card"]} {theme_styles["spacing"]} max-w-2xl mx-auto mb-8 fade-in">'
+            f'<div id="rsvp-root" {site_id_attr} class="{theme_styles["card"]} {theme_styles["spacing"]} max-w-lg mx-auto mb-8 fade-in">'
             f'<h3 class="text-2xl md:text-3xl font-bold {colors["accent"]} mb-6 text-center">Подтвердите участие</h3>'
             f'{buttons_html}'
             f'{form_html}'
@@ -440,7 +398,7 @@ class SiteGeneratorService:
             f'  }}\n'
             f'}})();</script>'
         )
-        print(f"[RSVP] rsvp_html preview: {rsvp_html[:300]} ...")
+
         return rsvp_html
     
     def _generate_contact_section(self, data: Dict[str, Any], colors: Dict[str, str], theme_styles: Dict[str, str]) -> str:
@@ -474,7 +432,7 @@ class SiteGeneratorService:
             """)
         
         return f"""
-        <div class="{theme_styles['card']} {theme_styles['spacing']} max-w-md mx-auto fade-in">
+        <div class="{theme_styles['card']} {theme_styles['spacing']} max-w-sm mx-auto fade-in">
             <h3 class="text-xl font-bold {colors['accent']} mb-6 text-center">
                 Вопросы?
             </h3>
@@ -550,86 +508,110 @@ class SiteGeneratorService:
         return code
 
     async def generate_html(self, event_json: dict) -> str:
-        print(f"[HTML] 🚀 Начинаем генерацию HTML")
-        print(f"[HTML] event_json id={event_json.get('id')} title={event_json.get('content_details', {}).get('event_title')}")
-        
         event = EventData.parse_obj(event_json)
         data = event.content_details
         
-        print(f"[HTML] 📋 Данные события:")
-        print(f"[HTML]   - event_type: {event.event_type}")
-        print(f"[HTML]   - theme: {event.theme}")
-        print(f"[HTML]   - color_preferences: {event.color_preferences}")
-        print(f"[HTML]   - content_details keys: {list(data.keys())}")
-        
         # Получаем UUID сайта, если есть
         site_id = str(event_json.get('id', ''))
-        print(f"[HTML] site_id: {site_id}")
         
         # Получаем цветовую схему и стили темы
         colors = self._get_color_scheme(event.color_preferences)
         theme_styles = self._get_theme_styles(event.theme)
-        print(f"[HTML] Цветовая схема: {event.color_preferences}")
-        print(f"[HTML] Тема: {event.theme}")
         
         # Парсим дату события
         event_date = None
         if data.get('event_date'):
             try:
                 event_date = datetime.strptime(data['event_date'], '%Y-%m-%d')
-                print(f"[HTML] Дата события: {event_date}")
             except ValueError:
-                print(f"[HTML] ❌ Ошибка парсинга даты: {data['event_date']}")
                 pass
         
         # Геокодируем адрес для карты
         location_data = None
-        print(f"[HTML] 🔍 Анализ данных для карты:")
-        print(f"[HTML]   - city: '{data.get('city')}'")
-        print(f"[HTML]   - venue_name: '{data.get('venue_name')}'")
-        print(f"[HTML]   - location: '{data.get('location')}'")
-        print(f"[HTML]   - event_city: '{data.get('event_city')}'")
-        print(f"[HTML]   - venue: '{data.get('venue')}'")
         
         # Проверяем разные варианты названий полей
         city = data.get('city') or data.get('event_city')
         venue = data.get('venue_name') or data.get('location') or data.get('venue')
         
-        print(f"[HTML] 🎯 Выбранные поля:")
-        print(f"[HTML]   - city: '{city}'")
-        print(f"[HTML]   - venue: '{venue}'")
-        
         if city and venue:
             address = f"{city}, {venue}".strip()
-            print(f"[HTML] 🗺️ Геокодируем адрес: '{address}'")
             if address:
                 location_data = await self._geocode_address(address)
-                print(f"[HTML] 📍 Результат геокодирования: {location_data}")
-            else:
-                print(f"[HTML] ❌ Адрес пустой после strip()")
-        else:
-            print(f"[HTML] ❌ Недостаточно данных для геокодирования:")
-            print(f"[HTML]   - city: '{city}' (пустой: {not city})")
-            print(f"[HTML]   - venue: '{venue}' (пустой: {not venue})")
         
         # Генерируем компоненты
-        print(f"[HTML] 🔧 Генерируем компоненты...")
         calendar_html = self._generate_calendar_html(event_date, colors)
         rsvp_section = self._generate_rsvp_section(data, colors, theme_styles, site_id=site_id)
         contact_section = self._generate_contact_section(data, colors, theme_styles)
         map_section = self._generate_map_html(location_data, colors, theme_styles)
         
-        print(f"[HTML] 📊 Результаты генерации:")
-        print(f"[HTML]   - calendar_html: {'✅' if calendar_html else '❌'}")
-        print(f"[HTML]   - rsvp_section: {'✅' if rsvp_section else '❌'}")
-        print(f"[HTML]   - contact_section: {'✅' if contact_section else '❌'}")
-        print(f"[HTML]   - map_section: {'✅' if map_section else '❌'}")
-        print(f"[HTML]   - map_section length: {len(map_section) if map_section else 0}")
-        
         # Форматируем дату и время
         formatted_date = format_date(event_date, 'EEEE, d MMMM y', locale='ru').capitalize() if event_date else ''
         formatted_time = data.get('event_time', '').split(':')[:2]
         formatted_time = ':'.join(formatted_time) if len(formatted_time) == 2 else data.get('event_time', '')
+        
+        # Формируем полную дату с временем
+        full_datetime = f"{formatted_date}, {formatted_time}" if formatted_time else formatted_date
+        
+        # Создаем карточки дополнительной информации
+        dress_code_card = f'''
+                <!-- Dress Code Card -->
+                <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 icon-gradient bg-gradient-to-r {colors['primary']} rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold {colors['accent']}">Дресс-код</h3>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed">{data.get('dress_code', 'Свободный стиль')}</p>
+                </div>
+                ''' if data.get('dress_code') else ''
+        
+        special_notes_card = f'''
+                <!-- Special Notes Card -->
+                <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 icon-gradient bg-gradient-to-r {colors['primary']} rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold {colors['accent']}">Важно знать</h3>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed">{data.get('special_notes', '')}</p>
+                </div>
+                ''' if data.get('special_notes') else ''
+        
+        gift_info_card = f'''
+                <!-- Gift Info Card -->
+                <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 icon-gradient bg-gradient-to-r {colors['primary']} rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold {colors['accent']}">Подарки</h3>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed">{data.get('gift_info', '')}</p>
+                </div>
+                ''' if data.get('gift_info') else ''
+        
+        menu_info_card = f'''
+                <!-- Menu Card -->
+                <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 icon-gradient bg-gradient-to-r {colors['primary']} rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold {colors['accent']}">Меню</h3>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed">{data.get('menu_info', '')}</p>
+                </div>
+                ''' if data.get('menu_info') else ''
         
         # Дополнительные CSS стили для темы
         extra_styles = ""
@@ -756,6 +738,52 @@ class SiteGeneratorService:
             overflow: hidden;
         }}
         
+        /* Улучшенный скролл */
+        html {{
+            scroll-behavior: smooth;
+            scroll-padding-top: 2rem;
+        }}
+        
+        body {{
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }}
+        
+        /* Плавный скролл для всех элементов */
+        * {{
+            scroll-behavior: smooth;
+        }}
+        
+        /* Стили для скроллбара */
+        ::-webkit-scrollbar {{
+            width: 8px;
+        }}
+        
+        ::-webkit-scrollbar-track {{
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }}
+        
+        ::-webkit-scrollbar-thumb {{
+            background: linear-gradient(135deg, {colors['primary']}, {colors['secondary']});
+            border-radius: 4px;
+        }}
+        
+        ::-webkit-scrollbar-thumb:hover {{
+            background: linear-gradient(135deg, {colors['secondary']}, {colors['primary']});
+        }}
+        
+        /* Параллакс контейнер */
+        .bg-parallax {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }}
+        
         .map-placeholder::before {{
             content: "📍";
             position: absolute;
@@ -815,7 +843,7 @@ class SiteGeneratorService:
                     </svg>
                     </div>
                     <span class="text-sm sm:text-base font-medium {colors['accent']}">
-                        {formatted_date}{f', {formatted_time}' if formatted_time else ''}
+                        {full_datetime}
                     </span>
                 </div>
             </div>
@@ -823,7 +851,7 @@ class SiteGeneratorService:
             <!-- Main Content Grid -->
 <div class="grid grid-cols-1 gap-8 mb-12 sm:mb-16">
   
-  <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift w-full">
+  <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift max-w-lg mx-auto w-full">
     <div class="flex items-center gap-4 mb-6">
       <div class="w-12 h-12 icon-gradient bg-gradient-to-r {colors['primary']} rounded-2xl flex items-center justify-center pulse-gentle">
         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -838,7 +866,7 @@ class SiteGeneratorService:
   </div>
 
   <!-- Location Card -->
-  <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift w-full">
+  <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift max-w-2xl mx-auto w-full">
     <div class="flex items-center gap-4 mb-6">
       <div class="w-12 h-12 icon-gradient bg-gradient-to-r {colors['primary']} rounded-2xl flex items-center justify-center pulse-gentle">
         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -859,7 +887,7 @@ class SiteGeneratorService:
         {f'<p class="text-sm text-gray-600 mb-4">{data.get("city", "")}</p>' if data.get('city') else ''}
         
         {map_section if map_section else '''
-        <div class="w-full h-64 rounded-lg overflow-hidden border border-gray-200 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+        <div class="w-full h-80 rounded-lg overflow-hidden border border-gray-200 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center max-w-2xl mx-auto">
           <div class="text-center">
             <div class="text-4xl mb-4">📍</div>
             <p class="text-lg font-semibold text-gray-700">Место проведения</p>
@@ -875,67 +903,14 @@ class SiteGeneratorService:
 
             
             <!-- Additional Info Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 sm:mb-16">
-                {f'''
-                <!-- Dress Code Card -->
-                <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift">
-                    <div class="flex items-center gap-4 mb-4">
-                        <div class="w-10 h-10 icon-gradient bg-gradient-to-r {colors['primary']} rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-bold {colors['accent']}">Дресс-код</h3>
-                    </div>
-                    <p class="text-gray-600 leading-relaxed">{data.get('dress_code', 'Свободный стиль')}</p>
-                </div>
-                ''' if data.get('dress_code') else ''}
-                
-                {f'''
-                <!-- Special Notes Card -->
-                <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift">
-                    <div class="flex items-center gap-4 mb-4">
-                        <div class="w-10 h-10 icon-gradient bg-gradient-to-r {colors['primary']} rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-bold {colors['accent']}">Важно знать</h3>
-                    </div>
-                    <p class="text-gray-600 leading-relaxed">{data.get('special_notes', '')}</p>
-                </div>
-                ''' if data.get('special_notes') else ''}
-                
-                {f'''
-                <!-- Gift Info Card -->
-                <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift">
-                    <div class="flex items-center gap-4 mb-4">
-                        <div class="w-10 h-10 icon-gradient bg-gradient-to-r {colors['primary']} rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-bold {colors['accent']}">Подарки</h3>
-                    </div>
-                    <p class="text-gray-600 leading-relaxed">{data.get('gift_info', '')}</p>
-                </div>
-                ''' if data.get('gift_info') else ''}
-                
-                {f'''
-                <!-- Menu Card -->
-                <div class="{theme_styles['card']} {theme_styles['spacing']} slide-up hover-lift">
-                    <div class="flex items-center gap-4 mb-4">
-                        <div class="w-10 h-10 icon-gradient bg-gradient-to-r {colors['primary']} rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-bold {colors['accent']}">Меню</h3>
-                    </div>
-                    <p class="text-gray-600 leading-relaxed">{data.get('menu_info', '')}</p>
-                </div>
-                ''' if data.get('menu_info') else ''}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 sm:mb-16 max-w-4xl mx-auto">
+                {dress_code_card}
+                {special_notes_card}
+                {gift_info_card}
+                {menu_info_card}
             </div>
+            
+
             
             <!-- RSVP Section -->
             {rsvp_section}
@@ -945,7 +920,7 @@ class SiteGeneratorService:
             
             <!-- Footer -->
             <div class="text-center mt-12 sm:mt-16 fade-in">
-                <div class="{theme_styles['card']} {theme_styles['spacing']} max-w-2xl mx-auto">
+                <div class="{theme_styles['card']} {theme_styles['spacing']} max-w-lg mx-auto">
                     <div class="flex items-center justify-center gap-4 mb-6">
                         <div class="w-12 h-12 icon-gradient bg-gradient-to-r {colors['primary']} rounded-full flex items-center justify-center pulse-gentle">
                             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1004,20 +979,32 @@ class SiteGeneratorService:
                 }}, 150);
                 
                 // Здесь можно добавить отправку данных на сервер
-                console.log('RSVP clicked:', this.textContent);
             }});
         }});
         
-        // Параллакс эффект для фона
-        window.addEventListener('scroll', () => {{
-            const scrolled = window.pageYOffset;
-            const parallax = document.querySelector('body');
-            const speed = scrolled * 0.5;
-            
-            if (parallax) {{
-                parallax.style.transform = `translateY(${{speed}}px)`;
-            }}
+        // Плавный скролл для всех ссылок
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {{
+            anchor.addEventListener('click', function (e) {{
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {{
+                    target.scrollIntoView({{
+                        behavior: 'smooth',
+                        block: 'start'
+                    }});
+                }}
+            }});
         }});
+        
+        // Параллакс эффект только для фонового изображения (если есть)
+        const backgroundImage = document.querySelector('.bg-parallax');
+        if (backgroundImage) {{
+            window.addEventListener('scroll', () => {{
+                const scrolled = window.pageYOffset;
+                const speed = scrolled * 0.3;
+                backgroundImage.style.transform = `translateY(${{speed}}px)`;
+            }});
+        }}
         
         // Анимация hover для карточек
         document.querySelectorAll('.hover-lift').forEach(card => {{
@@ -1040,7 +1027,7 @@ class SiteGeneratorService:
                 mapPlaceholder.innerHTML = `
                     <div class="h-full w-full bg-gray-100 rounded-xl flex items-center justify-center">
                         <div class="text-center">
-                            <div class="w-16 h-16 bg-gradient-to-r {colors['primary']} rounded-full flex items-center justify-center mx-auto mb-2">
+                            <div class="w-16 h-16 bg-gradient-to-r ''' + colors['primary'] + ''' rounded-full flex items-center justify-center mx-auto mb-2">
                                 <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -1055,12 +1042,6 @@ class SiteGeneratorService:
             </script>
 </body>
 </html>"""
-        
-        print(f"[HTML] 🎉 Генерация HTML завершена")
-        print(f"[HTML] 📏 Размер HTML: {len(html)} символов")
-        print(f"[HTML] 🗺️ Карта включена: {'✅' if 'mapgl.Map' in html else '❌'}")
-        print(f"[HTML] 🗺️ API ключ в HTML: {'✅' if getattr(settings, 'TWO_GIS_API_KEY', '') in html else '❌'}")
-        print(f"[HTML] 🗺️ MapGL script включен: {'✅' if 'mapgl.2gis.com/api/js/v1' in html else '❌'}")
         
         return html
 
@@ -1151,15 +1132,15 @@ class SiteGeneratorService:
         styles = THEME_STYLES[theme]
         
         return f"""
-        <div class="{colors['background']} p-8 rounded-lg">
+        <div class="''' + colors['background'] + ''' p-8 rounded-lg">
             <div class="{styles['card']} {styles['spacing']} text-center">
-                <h2 class="{styles['title']} bg-gradient-to-r {colors['primary']} gradient-text mb-4" style="font-size: 2rem;">
+                <h2 class="{styles['title']} bg-gradient-to-r ''' + colors['primary'] + ''' gradient-text mb-4" style="font-size: 2rem;">
                     Пример заголовка
                 </h2>
-                <p class="{styles['description']} {colors['accent']} mb-6" style="font-size: 1rem;">
+                <p class="{styles['description']} ''' + colors['accent'] + ''' mb-6" style="font-size: 1rem;">
                     Это пример описания события в выбранной теме и цветовой схеме
                 </p>
-                <button class="{styles['button']} bg-gradient-to-r {colors['primary']} text-white">
+                <button class="{styles['button']} bg-gradient-to-r ''' + colors['primary'] + ''' text-white">
                     Кнопка действия
                 </button>
             </div>
@@ -1347,7 +1328,7 @@ async def example_usage():
     # Валидация данных
     errors = service.validate_event_data(event_data)
     if errors:
-        print("Ошибки валидации:", errors)
+
         return
     
     # Генерация HTML приглашения
@@ -1355,15 +1336,15 @@ async def example_usage():
     
     # Сохранение в файл
     filepath = service.save_to_file(html_content)
-    print(f"Приглашение сохранено в: {filepath}")
+    
     
     # Генерация React компонента
     react_component = await service.generate_react_component(event_data)
-    print("React компонент сгенерирован успешно")
+    
     
     # Получение превью темы
     theme_preview = service.get_theme_preview("elegant", "romantic_pastels")
-    print("Превью темы:", theme_preview["theme"])
+    
 
 if __name__ == "__main__":
     import asyncio
