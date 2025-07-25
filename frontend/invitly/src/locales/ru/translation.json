@@ -720,10 +720,10 @@
     },
     "verify_email": {
       "title": "Подтвердите email",
-      "subtitle": "Мы отправили код подтверждения на ваш email",
+      "subtitle": "Email сервис временно недоступен. Код сгенерирован в логах сервера.",
       "code": "Код подтверждения",
       "verify_button": "Подтвердить",
-      "resend_code": "Отправить код повторно",
+      "resend_code": "Сгенерировать код повторно",
       "back_to_login": "Вернуться к входу",
       "success_message": "Email успешно подтвержден",
       "errors": {
@@ -774,7 +774,7 @@
       "google_error": "Ошибка Google OAuth"
     },
     "email": {
-      "service_error": "Ошибка сервиса email"
+      "service_error": "Email сервис временно недоступен"
     },
     "rate_limit": {
       "exceeded": "Превышен лимит запросов"

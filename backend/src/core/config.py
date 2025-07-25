@@ -108,9 +108,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = Field(env="GOOGLE_CLIENT_SECRET")
     GOOGLE_REDIRECT_URI: str = Field(env="GOOGLE_REDIRECT_URI")
     
-    # Email Configuration
-    RESEND_API_KEY: str = Field(env="RESEND_API_KEY")
-    MAIL_FROM: str = Field(env="MAIL_FROM")
+
     
     # 2GIS API Configuration
     TWO_GIS_API_KEY: str = Field(default_factory=lambda: os.getenv('VITE_2GIS_API_KEY', ''), env='VITE_2GIS_API_KEY')

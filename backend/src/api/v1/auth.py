@@ -58,10 +58,11 @@ async def register(
         # Create user
         user = await user_service.create_user(user_data)
         
-        # Генерируем и отправляем код верификации
+        # Генерируем код верификации (email сервис временно недоступен)
         verification_code = await user_service.generate_email_verification_code(user.email)
         if verification_code:
             email_service.send_verification_email(user.email, verification_code)
+            logger.info(f"Verification code generated for {user.email}: {verification_code}")
         
         # Generate token pair
         access_token, refresh_token = create_token_pair(user.id)
@@ -523,7 +524,8 @@ async def forgot_password_request(
         if not code:
             raise_user_not_found()
         email_service.send_verification_email(data.email, code)
-        return {"message": "Reset code sent"}
+        logger.info(f"Password reset code generated for {data.email}: {code}")
+        return {"message": "Reset code generated (email service temporarily unavailable)"}
     except LocalizedHTTPException:
         raise
     except Exception as e:
@@ -573,8 +575,8 @@ async def resend_verification_code(
         verification_code = await user_service.generate_email_verification_code(user.email)
         if verification_code:
             email_service.send_verification_email(user.email, verification_code)
-            logger.info(f"Verification code resent to: {user.email}")
-            return {"message": "Verification code sent successfully"}
+            logger.info(f"Verification code regenerated for {user.email}: {verification_code}")
+            return {"message": "Verification code generated (email service temporarily unavailable)"}
         else:
             raise_internal_server_error()
             

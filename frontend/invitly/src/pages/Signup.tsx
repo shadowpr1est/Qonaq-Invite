@@ -98,7 +98,8 @@ export default function Signup() {
   const resendCode = async () => {
     try {
       await resendVerificationEmail(email);
-      // Показать уведомление об успешной отправке (можно добавить toast)
+      // Показать уведомление об успешной генерации кода
+      setVerificationError(''); // Очищаем предыдущие ошибки
     } catch (error) {
       const errorMessage = ErrorHandler.handleAuthError(error, t, false);
       setVerificationError(errorMessage);
@@ -215,7 +216,8 @@ export default function Signup() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('auth.verify_email.title')}</h2>
               <p className="text-gray-600 text-sm">
-                Мы отправили код подтверждения на<br />
+                Email сервис временно недоступен.<br />
+                Код подтверждения сгенерирован в логах сервера.<br />
                 <span className="font-semibold text-gray-900">{email}</span>
               </p>
             </div>
@@ -253,12 +255,12 @@ export default function Signup() {
             </form>
             
             <div className="text-center mt-4 text-sm text-gray-600">
-              Не получили код?{' '}
+              Нужен новый код?{' '}
               <button
                 onClick={resendCode}
                 className="text-indigo-600 hover:text-indigo-700 font-medium"
               >
-                Отправить повторно
+                Сгенерировать новый код
               </button>
             </div>
           </div>

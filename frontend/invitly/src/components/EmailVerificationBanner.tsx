@@ -51,7 +51,7 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
         setResendSuccess(false);
       }, 5000);
     } catch (error) {
-      setResendError('Не удалось отправить письмо. Попробуйте позже.');
+      setResendError('Не удалось сгенерировать код. Попробуйте позже.');
     } finally {
       setIsResending(false);
     }
@@ -71,11 +71,11 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
             <Mail className="h-4 w-4 text-amber-600 shrink-0" />
             
             <div className="flex-1 min-w-0">
-              <AlertDescription className="text-amber-800 text-sm">
-                <div className="flex items-center gap-2">
-                  <span>
-                    Подтвердите email для доступа ко всем функциям.
-                        </span>
+                              <AlertDescription className="text-amber-800 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span>
+                      Email сервис временно недоступен. Коды верификации генерируются в логах сервера.
+                          </span>
                   {!resendSuccess && !resendError && !isResending && (
                         <Button
                       variant="ghost"
@@ -92,7 +92,7 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
                           ) : (
                             <>
                           <RefreshCw className="w-3 h-3 mr-1" />
-                          Отправить снова
+                          Сгенерировать код
                             </>
                           )}
                         </Button>
@@ -109,7 +109,7 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
                       className="flex items-center gap-1 text-green-700 text-xs mt-1"
                     >
                       <CheckCircle className="h-3 w-3" />
-                      <span>Письмо отправлено!</span>
+                      <span>Код сгенерирован в логах сервера!</span>
                     </motion.div>
                   )}
                   {resendError && (

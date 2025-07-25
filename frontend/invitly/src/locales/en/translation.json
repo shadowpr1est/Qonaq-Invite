@@ -727,10 +727,10 @@
     },
     "verify_email": {
       "title": "Verify your email",
-      "subtitle": "We sent a verification code to your email",
+      "subtitle": "Email service temporarily unavailable. Code generated in server logs.",
       "code": "Verification code",
       "verify_button": "Verify",
-      "resend_code": "Resend code",
+      "resend_code": "Generate code again",
       "back_to_login": "Back to sign in",
       "success_message": "Email verified successfully",
       "errors": {
@@ -781,7 +781,7 @@
       "google_error": "Google OAuth error"
     },
     "email": {
-      "service_error": "Email service error"
+      "service_error": "Email service temporarily unavailable"
     },
     "rate_limit": {
       "exceeded": "Rate limit exceeded"

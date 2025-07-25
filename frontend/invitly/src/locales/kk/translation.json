@@ -712,10 +712,10 @@
     },
     "verify_email": {
       "title": "Email-ді растау",
-      "subtitle": "Біз растау кодын email-ге жібердік",
+      "subtitle": "Email сервисі уақытша қолжетімсіз. Код сервер журналында жасалды.",
       "code": "Растау коды",
       "verify_button": "Растау",
-      "resend_code": "Кодты қайта жіберу",
+      "resend_code": "Кодты қайта жасау",
       "back_to_login": "Кіруге оралу",
       "success_message": "Email сәтті расталды",
       "errors": {
@@ -766,7 +766,7 @@
       "google_error": "Google OAuth қатесі"
     },
     "email": {
-      "service_error": "Email сервисі қатесі"
+      "service_error": "Email сервисі уақытша қолжетімсіз"
     },
     "rate_limit": {
       "exceeded": "Сұраулар шегі асылды"
